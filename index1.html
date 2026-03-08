@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Successful | EduStream</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes scaleIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes checkmark {
+            0% { stroke-dashoffset: 48; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .animate-scale-in { animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .checkmark-path {
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            animation: checkmark 0.6s 0.3s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen p-6 font-sans">
+
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl shadow-slate-200/60 p-8 text-center animate-scale-in">
+        <!-- Success Animation Icon -->
+        <div class="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
+            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                <path class="checkmark-path" stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+
+        <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight mb-2">Update Completed</h1>
+        <p class="text-slate-500 font-medium mb-8">
+            Your lesson details and video source have been successfully updated in the database.
+        </p>
+
+        <div class="space-y-3">
+            <button onclick="window.location.href='index.html'" 
+                class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-slate-200">
+                Back to Dashboard
+            </button>
+            
+            <button onclick="window.history.back()" 
+                class="w-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold py-4 rounded-2xl transition-all">
+                View Changes
+            </button>
+        </div>
+
+        <p class="mt-8 text-xs text-slate-400 font-semibold uppercase tracking-widest">
+            System Synchronized
+        </p>
+    </div>
+
+</body>
+</html>

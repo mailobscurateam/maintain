@@ -130,9 +130,29 @@
             return session.user;
         }
 
+        /**
+         * Fetches user email. 
+         * Note: Directly accessing auth.users requires service_role key.
+         * This implementation assumes a 'profiles' table exists that maps user_id to email.
+         * If no profiles table exists, it falls back to the User ID.
+         */
+        async function getUserEmail(userId) {
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('email')
+                    .eq('id', userId)
+                    .single();
+                
+                if (error || !data) return userId;
+                return data.email;
+            } catch {
+                return userId;
+            }
+        }
+
         async function loadQueue() {
             try {
-                // Fetch status table and join with courses for display info
                 const { data, error } = await supabase
                     .from('course_status')
                     .select(`
@@ -147,10 +167,6 @@
 
                 if (error) throw error;
 
-                // To get requester data from auth.users, we typically need to check a public profiles table 
-                // because auth.users is restricted. However, assuming metadata exists or using the admin API 
-                // if configured. For standard client side, we iterate and show user IDs or fetch linked profiles.
-                
                 updateStats(data);
 
                 if (data.length === 0) {
@@ -158,6 +174,8 @@
                     return;
                 }
 
+                // Map results and attempt to resolve emails if a profiles table is available
+                // For this UI, we will render the ID first and provide a placeholder for the email
                 tableBody.innerHTML = data.map(item => `
                     <tr class="hover:bg-slate-50/50 transition-colors">
                         <td class="px-6 py-4">
@@ -166,11 +184,13 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center">
-                                <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 mr-2">
-                                    <i class="fas fa-user text-xs"></i>
+                                <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-2">
+                                    <i class="fas fa-envelope text-[10px]"></i>
                                 </div>
                                 <div>
-                                    <div class="text-sm font-medium text-slate-700">${item.user_id}</div>
+                                    <div class="text-sm font-medium text-slate-700 user-email-cell" data-user-id="${item.user_id}">
+                                        ${item.user_id}
+                                    </div>
                                     <div class="text-[10px] text-slate-400 uppercase font-bold tracking-tight">
                                         Requested ${new Date(item.created_at).toLocaleDateString()}
                                     </div>
@@ -195,9 +215,25 @@
                     </tr>
                 `).join('');
 
+                // Resolve emails asynchronously
+                resolveUserEmails();
+
             } catch (err) {
                 console.error(err);
                 tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-red-500">Failed to load queue.</td></tr>';
+            }
+        }
+
+        async function resolveUserEmails() {
+            const cells = document.querySelectorAll('.user-email-cell');
+            for (const cell of cells) {
+                const userId = cell.getAttribute('data-user-id');
+                // Attempt to fetch from profiles table
+                const { data } = await supabase.from('profiles').select('email').eq('id', userId).single();
+                if (data && data.email) {
+                    cell.textContent = data.email;
+                    cell.classList.add('text-indigo-600');
+                }
             }
         }
 

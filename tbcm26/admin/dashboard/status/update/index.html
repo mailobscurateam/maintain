@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Approval | EduManager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #dcfce7; color: #166534; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+
+    <!-- Auth Guard Overlay -->
+    <div id="authGuard" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
+        <div class="text-center">
+            <i class="fas fa-shield-halved fa-spin text-4xl text-indigo-600 mb-4"></i>
+            <p class="text-slate-600 font-medium">Verifying Administrator Permissions...</p>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="window.location.href='index.html'">
+                <div class="bg-indigo-600 p-2 rounded-lg text-white">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <span class="text-xl font-bold tracking-tight">EduManager</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="adminEmail" class="text-sm text-slate-500 hidden md:block"></span>
+                <button id="logoutBtn" class="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-100">
+                    Sign Out
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-10 px-4 sm:px-6">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-slate-900">Content Approval Queue</h1>
+            <p class="text-slate-500 mt-1">Review course submissions and manage their publication status.</p>
+        </div>
+
+        <!-- Filters & Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="glass p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase">Pending</p>
+                    <p id="countPending" class="text-2xl font-bold text-amber-600">0</p>
+                </div>
+                <i class="fas fa-clock text-amber-200 text-2xl"></i>
+            </div>
+            <div class="glass p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase">Approved</p>
+                    <p id="countApproved" class="text-2xl font-bold text-emerald-600">0</p>
+                </div>
+                <i class="fas fa-check-circle text-emerald-200 text-2xl"></i>
+            </div>
+            <div class="glass p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase">Rejected</p>
+                    <p id="countRejected" class="text-2xl font-bold text-red-600">0</p>
+                </div>
+                <i class="fas fa-times-circle text-red-200 text-2xl"></i>
+            </div>
+        </div>
+
+        <!-- Approval Table -->
+        <div class="glass rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Course Detail</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Requested By</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approvalTableBody" class="divide-y divide-slate-100">
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center text-slate-400">
+                                <i class="fas fa-circle-notch fa-spin mr-2"></i> Fetching queue...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+        const SUPABASE_URL = 'https://tsaoxjzvhxiggntibpui.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzYW94anp2aHhpZ2dudGlicHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDQ2OTAsImV4cCI6MjA5MTQyMDY5MH0.Q5Iu51O3NK4k2kcc_GoegnyAYIFIs2SUkQOV10qp2jI';
+        
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const tableBody = document.getElementById('approvalTableBody');
+        const authGuard = document.getElementById('authGuard');
+        const adminEmail = document.getElementById('adminEmail');
+
+        async function checkAuth() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = '/login';
+                return null;
+            }
+            adminEmail.textContent = session.user.email;
+            authGuard.classList.add('hidden');
+            return session.user;
+        }
+
+        async function loadQueue() {
+            try {
+                // Fetch status table and join with courses for display info
+                const { data, error } = await supabase
+                    .from('course_status')
+                    .select(`
+                        id,
+                        status,
+                        created_at,
+                        user_id,
+                        course_id,
+                        courses ( name, instructor )
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                updateStats(data);
+
+                if (data.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-12 text-center text-slate-400 font-medium">Approval queue is empty.</td></tr>';
+                    return;
+                }
+
+                tableBody.innerHTML = data.map(item => `
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="font-semibold text-slate-900">${item.courses?.name || 'Unknown Course'}</div>
+                            <div class="text-xs text-slate-500">ID: ${item.course_id}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-slate-700">${item.user_id}</div>
+                            <div class="text-[10px] text-slate-400 uppercase font-bold">${new Date(item.created_at).toLocaleString()}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="status-pill status-${item.status}">${item.status}</span>
+                        </td>
+                        <td class="px-6 py-4 text-right space-x-2">
+                            ${item.status !== 'approved' ? `
+                                <button onclick="updateStatus('${item.id}', 'approved')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-lg transition-all shadow-sm">
+                                    Approve
+                                </button>
+                            ` : ''}
+                            ${item.status !== 'rejected' ? `
+                                <button onclick="updateStatus('${item.id}', 'rejected')" class="text-xs bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold py-2 px-3 rounded-lg transition-all">
+                                    Reject
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                console.error(err);
+                tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-red-500">Failed to load queue.</td></tr>';
+            }
+        }
+
+        function updateStats(data) {
+            document.getElementById('countPending').textContent = data.filter(i => i.status === 'pending').length;
+            document.getElementById('countApproved').textContent = data.filter(i => i.status === 'approved').length;
+            document.getElementById('countRejected').textContent = data.filter(i => i.status === 'rejected').length;
+        }
+
+        window.updateStatus = async (rowId, newStatus) => {
+            try {
+                const { error } = await supabase
+                    .from('course_status')
+                    .update({ status: newStatus })
+                    .eq('id', rowId);
+
+                if (error) throw error;
+                loadQueue();
+            } catch (err) {
+                alert('Update failed: ' + err.message);
+            }
+        };
+
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            window.location.href = '/login';
+        });
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (await checkAuth()) loadQueue();
+        });
+    </script>
+</body>
+</html>

@@ -158,9 +158,8 @@
             refreshIcon.classList.add('animate-spin');
 
             try {
-                // Fetching from 'monthly_approvals' and joining 'profiles' on user_id
-                // We explicitly select the 'email' column from the profiles table
-                const { data, error } = await sb
+                // Fetch activation requests first without the direct join to profiles
+                const { data: approvals, error: approvalsError } = await sb
                     .from('monthly_approvals')
                     .select(`
                         id,
@@ -169,17 +168,27 @@
                         month_number,
                         status,
                         created_at,
-                        courses ( name ),
-                        profiles ( email )
+                        courses ( name )
                     `)
                     .order('created_at', { ascending: false });
 
-                if (error) throw error;
+                if (approvalsError) throw approvalsError;
 
-                // Map data to ensure user_email is easily accessible for filtering/rendering
-                masterData = data.map(item => ({
+                // Fetch all profiles to map emails manually (avoids schema cache relationship errors)
+                const { data: profiles, error: profilesError } = await sb
+                    .from('profiles')
+                    .select('id, email');
+
+                if (profilesError) throw profilesError;
+
+                // Create a lookup map for faster processing
+                const profileMap = {};
+                profiles.forEach(p => profileMap[p.id] = p.email);
+
+                // Merge the data in-memory
+                masterData = approvals.map(item => ({
                     ...item,
-                    user_email: item.profiles?.email || 'N/A'
+                    user_email: profileMap[item.user_id] || 'Unknown Student'
                 }));
 
                 updateStats(masterData);

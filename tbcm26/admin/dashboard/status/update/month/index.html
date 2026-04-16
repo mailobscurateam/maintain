@@ -105,7 +105,7 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-900/50 text-slate-500 text-xs font-bold uppercase tracking-widest">
-                            <th class="px-6 py-4">Student</th>
+                            <th class="px-6 py-4">Student Email</th>
                             <th class="px-6 py-4">Course</th>
                             <th class="px-6 py-4">Month</th>
                             <th class="px-6 py-4">Status</th>
@@ -145,7 +145,7 @@
             document.getElementById('search-input').addEventListener('input', (e) => {
                 const term = e.target.value.toLowerCase();
                 const filtered = masterData.filter(item => 
-                    item.profiles?.email?.toLowerCase().includes(term) || 
+                    item.user_email?.toLowerCase().includes(term) || 
                     item.courses?.name?.toLowerCase().includes(term) ||
                     item.user_id.toLowerCase().includes(term)
                 );
@@ -158,7 +158,8 @@
             refreshIcon.classList.add('animate-spin');
 
             try {
-                // Modified query to include profiles table for email
+                // Fetching from 'monthly_approvals' and joining 'profiles' on user_id
+                // We explicitly select the 'email' column from the profiles table
                 const { data, error } = await sb
                     .from('monthly_approvals')
                     .select(`
@@ -175,9 +176,14 @@
 
                 if (error) throw error;
 
-                masterData = data;
-                updateStats(data);
-                renderTable(data);
+                // Map data to ensure user_email is easily accessible for filtering/rendering
+                masterData = data.map(item => ({
+                    ...item,
+                    user_email: item.profiles?.email || 'N/A'
+                }));
+
+                updateStats(masterData);
+                renderTable(masterData);
             } catch (err) {
                 console.error(err);
                 alert("Error fetching data: " + err.message);
@@ -246,7 +252,7 @@
                 const date = new Date(item.created_at).toLocaleDateString();
                 const courseName = item.courses?.name || 'Unknown Course';
                 const monthName = MONTH_NAMES[item.month_number - 1] || `Month ${item.month_number}`;
-                const userEmail = item.profiles?.email || 'No email found';
+                const userEmail = item.user_email;
                 
                 return `
                     <tr class="table-row">

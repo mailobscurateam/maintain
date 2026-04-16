@@ -19,15 +19,29 @@
             from { transform: translateY(20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
+        [v-cloak] { display: none; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
 
+    <!-- Auth Guard Overlay (Prevents flash of content) -->
+    <div id="authGuard" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
+        <div class="text-center">
+            <i class="fas fa-circle-notch fa-spin text-4xl text-indigo-600 mb-4"></i>
+            <p class="text-slate-600 font-medium">Verifying Session...</p>
+        </div>
+    </div>
+
     <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6">
-        <!-- Header -->
-        <div class="text-center mb-10">
-            <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Lesson Management</h1>
-            <p class="text-slate-500 mt-2">Create a new lesson entry linked to an existing course</p>
+        <!-- Header & Action Bar -->
+        <div class="flex justify-between items-start mb-10">
+            <div class="text-left">
+                <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Lesson Management</h1>
+                <p class="text-slate-500 mt-2">Create a new lesson entry linked to an existing course</p>
+            </div>
+            <button id="logoutBtn" class="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-100 flex items-center">
+                <i class="fas fa-sign-out-alt mr-2"></i> Sign Out
+            </button>
         </div>
 
         <!-- Main Form Container -->
@@ -153,11 +167,35 @@
         const statusText = document.getElementById('statusText');
         const statusIcon = document.getElementById('statusIcon');
         const submitBtn = document.getElementById('submitBtn');
+        const authGuard = document.getElementById('authGuard');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        /**
+         * Auth Guard Logic
+         */
+        async function checkUser() {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (error || !session) {
+                // Not logged in: Redirect to login page
+                window.location.href = '/login';
+                return null;
+            }
+
+            // User is authenticated, hide guard and proceed
+            authGuard.classList.add('hidden');
+            return session.user;
+        }
+
+        // Logout functionality
+        logoutBtn.addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            window.location.href = '/login';
+        });
 
         // Function to fetch courses and populate dropdown
         async function fetchCourses() {
             try {
-                // Using 'name' column as per your structure
                 const { data, error } = await supabase
                     .from('courses')
                     .select('id, name') 
@@ -170,7 +208,6 @@
                     data.forEach(course => {
                         const option = document.createElement('option');
                         option.value = course.id;
-                        // Display name, fallback to id
                         option.textContent = course.name || `Course ID: ${course.id}`;
                         courseSelect.appendChild(option);
                     });
@@ -184,9 +221,12 @@
         }
 
         // Initialize Page
-        window.addEventListener('DOMContentLoaded', () => {
-            document.querySelector('select[name="month"]').value = new Date().getMonth() + 1;
-            fetchCourses();
+        window.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkUser();
+            if (user) {
+                document.querySelector('select[name="month"]').value = new Date().getMonth() + 1;
+                fetchCourses();
+            }
         });
 
         function showMessage(msg, type = 'success') {
@@ -207,6 +247,13 @@
 
         lessonForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            // Re-check auth before submission for extra security
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = '/login';
+                return;
+            }
 
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span>Uploading...</span><i class="fas fa-circle-notch fa-spin ml-2"></i>';

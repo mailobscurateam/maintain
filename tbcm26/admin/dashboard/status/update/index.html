@@ -147,6 +147,10 @@
 
                 if (error) throw error;
 
+                // To get requester data from auth.users, we typically need to check a public profiles table 
+                // because auth.users is restricted. However, assuming metadata exists or using the admin API 
+                // if configured. For standard client side, we iterate and show user IDs or fetch linked profiles.
+                
                 updateStats(data);
 
                 if (data.length === 0) {
@@ -161,8 +165,17 @@
                             <div class="text-xs text-slate-500">ID: ${item.course_id}</div>
                         </td>
                         <td class="px-6 py-4">
-                            <div class="text-sm text-slate-700">${item.user_id}</div>
-                            <div class="text-[10px] text-slate-400 uppercase font-bold">${new Date(item.created_at).toLocaleString()}</div>
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 mr-2">
+                                    <i class="fas fa-user text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-slate-700">${item.user_id}</div>
+                                    <div class="text-[10px] text-slate-400 uppercase font-bold tracking-tight">
+                                        Requested ${new Date(item.created_at).toLocaleDateString()}
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                         <td class="px-6 py-4">
                             <span class="status-pill status-${item.status}">${item.status}</span>

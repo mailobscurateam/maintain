@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Approvals Admin | Nexus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #0f0f12;
+            --bg-card: #1a1a1f;
+            --border: #2d2d35;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-page); 
+            color: #f8fafc;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        .admin-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .table-row {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .table-row:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .btn-action {
+            transition: all 0.2s;
+        }
+
+        .btn-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+    <nav class="sticky top-0 z-50 bg-[#0f0f12]/80 backdrop-blur-md border-b border-[#2d2d35]">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3 text-white font-bold text-xl">
+                <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                    <i data-lucide="check-square" class="w-5 h-5 text-white"></i>
+                </div>
+                Nexus Monthly Admin
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="fetchData()" class="p-2 hover:bg-slate-800 rounded-lg text-slate-400">
+                    <i data-lucide="refresh-cw" class="w-5 h-5" id="refresh-icon"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-12">
+        <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+                <h1 class="text-3xl font-extrabold text-white mb-2">Monthly Activations</h1>
+                <p class="text-slate-400">Review and manage student requests for specific curriculum months.</p>
+            </div>
+            <div class="flex gap-3">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                    <input type="text" id="search-input" placeholder="Search by email or course..." 
+                           class="bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-red-500 w-64">
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="admin-card p-4 rounded-xl">
+                <p class="text-slate-500 text-xs font-bold uppercase mb-1">Total Requests</p>
+                <p id="stat-total" class="text-xl font-bold">0</p>
+            </div>
+            <div class="admin-card p-4 rounded-xl border-l-4 border-l-amber-500">
+                <p class="text-amber-500 text-xs font-bold uppercase mb-1">Pending</p>
+                <p id="stat-pending" class="text-xl font-bold">0</p>
+            </div>
+            <div class="admin-card p-4 rounded-xl border-l-4 border-l-emerald-500">
+                <p class="text-emerald-500 text-xs font-bold uppercase mb-1">Approved</p>
+                <p id="stat-approved" class="text-xl font-bold">0</p>
+            </div>
+            <div class="admin-card p-4 rounded-xl border-l-4 border-l-red-500">
+                <p class="text-red-500 text-xs font-bold uppercase mb-1">Rejected</p>
+                <p id="stat-rejected" class="text-xl font-bold">0</p>
+            </div>
+        </div>
+
+        <div class="admin-card rounded-2xl overflow-hidden shadow-2xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900/50 text-slate-500 text-xs font-bold uppercase tracking-widest">
+                            <th class="px-6 py-4">Student</th>
+                            <th class="px-6 py-4">Course</th>
+                            <th class="px-6 py-4">Month</th>
+                            <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4">Requested On</th>
+                            <th class="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-tbody" class="text-sm">
+                        <!-- Content loaded via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="loading-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-[100]">
+            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 flex flex-col items-center gap-4">
+                <div class="w-10 h-10 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin"></div>
+                <p class="text-white font-medium">Updating Record...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://tsaoxjzvhxiggntibpui.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzYW94anp2aHhpZ2dudGlicHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDQ2OTAsImV4cCI6MjA5MTQyMDY5MH0.Q5Iu51O3NK4k2kcc_GoegnyAYIFIs2SUkQOV10qp2jI';
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let masterData = [];
+        const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+        async function init() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) return window.location.href = 'login.html';
+            
+            await fetchData();
+
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const filtered = masterData.filter(item => 
+                    item.profiles?.email?.toLowerCase().includes(term) || 
+                    item.courses?.name?.toLowerCase().includes(term) ||
+                    item.user_id.toLowerCase().includes(term)
+                );
+                renderTable(filtered);
+            });
+        }
+
+        async function fetchData() {
+            const refreshIcon = document.getElementById('refresh-icon');
+            refreshIcon.classList.add('animate-spin');
+
+            try {
+                // Modified query to include profiles table for email
+                const { data, error } = await sb
+                    .from('monthly_approvals')
+                    .select(`
+                        id,
+                        user_id,
+                        course_id,
+                        month_number,
+                        status,
+                        created_at,
+                        courses ( name ),
+                        profiles ( email )
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                masterData = data;
+                updateStats(data);
+                renderTable(data);
+            } catch (err) {
+                console.error(err);
+                alert("Error fetching data: " + err.message);
+            } finally {
+                refreshIcon.classList.remove('animate-spin');
+            }
+        }
+
+        function updateStats(data) {
+            document.getElementById('stat-total').textContent = data.length;
+            document.getElementById('stat-pending').textContent = data.filter(i => i.status === 'pending').length;
+            document.getElementById('stat-approved').textContent = data.filter(i => i.status === 'approved').length;
+            document.getElementById('stat-rejected').textContent = data.filter(i => i.status === 'rejected').length;
+        }
+
+        async function updateStatus(id, newStatus) {
+            setLoading(true);
+            try {
+                const updateData = { status: newStatus };
+                if (newStatus === 'approved') {
+                    updateData.approved_at = new Date().toISOString();
+                }
+
+                const { error } = await sb
+                    .from('monthly_approvals')
+                    .update(updateData)
+                    .eq('id', id);
+
+                if (error) throw error;
+                await fetchData();
+            } catch (err) {
+                alert("Failed to update status: " + err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function deleteRequest(id) {
+            if (!confirm("Are you sure you want to delete this activation request?")) return;
+            
+            setLoading(true);
+            try {
+                const { error } = await sb
+                    .from('monthly_approvals')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+                await fetchData();
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('admin-tbody');
+            if (!data.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-20 text-center text-slate-500 italic">No activation requests found</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map(item => {
+                const status = item.status || 'pending';
+                const date = new Date(item.created_at).toLocaleDateString();
+                const courseName = item.courses?.name || 'Unknown Course';
+                const monthName = MONTH_NAMES[item.month_number - 1] || `Month ${item.month_number}`;
+                const userEmail = item.profiles?.email || 'No email found';
+                
+                return `
+                    <tr class="table-row">
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                <span class="text-white font-medium">${userEmail}</span>
+                                <span class="text-[10px] text-slate-600 font-mono tracking-tighter">UID: ${item.user_id.substring(0, 12)}...</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-slate-300 font-medium">${courseName}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 bg-slate-800 rounded text-xs font-bold text-slate-300">
+                                ${monthName}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider
+                                ${status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : 
+                                  status === 'pending' ? 'bg-amber-500/10 text-amber-500' : 
+                                  'bg-red-500/10 text-red-500'}">
+                                ${status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-slate-500 text-xs">${date}</td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                ${status !== 'approved' ? `
+                                    <button onclick="updateStatus('${item.id}', 'approved')" class="btn-action p-2 bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white rounded-lg" title="Approve">
+                                        <i data-lucide="check" class="w-4 h-4"></i>
+                                    </button>
+                                ` : ''}
+                                
+                                ${status !== 'rejected' ? `
+                                    <button onclick="updateStatus('${item.id}', 'rejected')" class="btn-action p-2 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white rounded-lg" title="Reject">
+                                        <i data-lucide="x" class="w-4 h-4"></i>
+                                    </button>
+                                ` : ''}
+
+                                ${status !== 'pending' ? `
+                                    <button onclick="updateStatus('${item.id}', 'pending')" class="btn-action p-2 bg-amber-600/10 text-amber-500 hover:bg-amber-600 hover:text-white rounded-lg" title="Reset to Pending">
+                                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                                    </button>
+                                ` : ''}
+                                
+                                <div class="w-[1px] h-4 bg-slate-800 mx-1"></div>
+                                
+                                <button onclick="deleteRequest('${item.id}')" class="btn-action p-2 bg-slate-800 text-slate-500 hover:bg-red-600 hover:text-white rounded-lg" title="Delete">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function setLoading(isLoading) {
+            document.getElementById('loading-overlay').classList.toggle('hidden', !isLoading);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

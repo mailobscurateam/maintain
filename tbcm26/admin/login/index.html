@@ -18,13 +18,14 @@
     <style>
         :root {
             --math-primary: #ec4899; 
-            --math-dark: #09090b;
+            --math-light-bg: #f8fafc;
+            --math-text: #0f172a;
         }
 
         body {
             font-family: 'Outfit', sans-serif;
-            background-color: var(--math-dark);
-            color: #f4f4f5;
+            background-color: var(--math-light-bg);
+            color: var(--math-text);
             overflow: hidden; 
         }
 
@@ -40,27 +41,32 @@
         }
 
         .glass-panel {
-            background: rgba(24, 24, 27, 0.6);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 1);
+            box-shadow: 
+                0 20px 25px -5px rgb(0 0 0 / 0.05), 
+                0 8px 10px -6px rgb(0 0 0 / 0.05),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.4);
         }
 
         .input-field {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .input-field:focus {
             border-color: var(--math-primary);
-            background: rgba(236, 72, 153, 0.05);
+            background: #ffffff;
             outline: none;
             box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.1);
         }
 
         .gradient-btn {
-            background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+            color: white;
             transition: all 0.3s ease;
         }
 
@@ -70,7 +76,7 @@
         }
 
         .gradient-text {
-            background: linear-gradient(to bottom right, #fff 30%, #ec4899 100%);
+            background: linear-gradient(to bottom right, #1e293b 30%, #ec4899 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -97,72 +103,87 @@
         }
         .showing-password .shield-char {
             transform: translateY(-2px);
-            filter: drop-shadow(0 0 5px var(--math-primary));
+            filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.3));
+        }
+
+        /* Ambient Glows */
+        .ambient-glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, rgba(236, 72, 153, 0) 70%);
+            border-radius: 50%;
+            z-index: -5;
+            filter: blur(40px);
         }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-6">
 
     <div id="math-canvas"></div>
+    
+    <!-- Decorative background elements -->
+    <div class="ambient-glow top-0 left-0"></div>
+    <div class="ambient-glow bottom-0 right-0"></div>
 
     <div class="w-full max-w-md relative z-10">
         <div class="text-center mb-10">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-pink-600 rounded-2xl mb-6 shadow-lg shadow-pink-500/20 rotate-3">
-                <span class="text-3xl font-black">Σ</span>
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-pink-600 rounded-2xl mb-6 shadow-xl shadow-pink-500/20 rotate-3">
+                <span class="text-3xl font-black text-white">Σ</span>
             </div>
-            <h1 class="text-4xl font-black tracking-tighter mb-2">NEXUS<span class="text-pink-500">PRIME</span></h1>
-            <p class="mono text-[10px] uppercase tracking-[0.3em] text-gray-500">Mathematics Excellence Portal</p>
+            <h1 class="text-4xl font-black tracking-tighter mb-2 text-slate-900">NEXUS<span class="text-pink-500">PRIME</span></h1>
+            <p class="mono text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">Mathematics Excellence Portal</p>
         </div>
 
         <div class="glass-panel rounded-[2.5rem] p-10" id="login-container">
-            <h2 class="text-2xl font-bold mb-8 text-center">Student <span class="gradient-text">Sign In</span></h2>
+            <h2 class="text-2xl font-bold mb-8 text-center text-slate-800">Student <span class="gradient-text">Sign In</span></h2>
             
             <form id="login-form" class="space-y-6">
                 <div>
-                    <label class="block mono text-[10px] uppercase tracking-widest text-gray-400 mb-2 ml-1">Email Address</label>
+                    <label class="block mono text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2 ml-1">Email Address</label>
                     <div class="relative">
-                        <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
+                        <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
                         <input type="email" id="email" required placeholder="name@student.com" 
-                            class="input-field w-full py-4 pl-12 pr-4 rounded-2xl text-sm">
+                            class="input-field w-full py-4 pl-12 pr-4 rounded-2xl text-sm placeholder:text-slate-300">
                     </div>
                 </div>
 
                 <div>
                     <div class="flex justify-between items-end mb-2 ml-1">
-                        <label class="block mono text-[10px] uppercase tracking-widest text-gray-400">Secure Password</label>
+                        <label class="block mono text-[10px] uppercase tracking-widest text-slate-500 font-bold">Secure Password</label>
                         <!-- Animated Character Helper -->
                         <div class="shield-char transition-all duration-300">
-                             <i data-lucide="shield-check" class="w-4 h-4 text-pink-500/50" id="guard-icon"></i>
+                             <i data-lucide="shield-check" class="w-4 h-4 text-pink-500/60" id="guard-icon"></i>
                         </div>
                     </div>
                     <div class="relative">
-                        <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
+                        <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
                         <input type="password" id="password" required placeholder="••••••••" 
-                            class="input-field w-full py-4 pl-12 pr-12 rounded-2xl text-sm">
+                            class="input-field w-full py-4 pl-12 pr-12 rounded-2xl text-sm placeholder:text-slate-300">
                         
-                        <button type="button" id="toggle-password" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors">
+                        <button type="button" id="toggle-password" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-pink-500 transition-colors">
                             <i data-lucide="eye" class="w-4 h-4 eye-icon" id="eye-icon"></i>
                         </button>
                     </div>
-                    <div class="flex justify-end mt-2 mr-1">
-                        <a href="/forgot-password" class="mono text-[9px] uppercase tracking-wider text-gray-500 hover:text-pink-500 transition-colors">Forgot Password?</a>
+                    <div class="flex justify-end mt-3 mr-1">
+                        <a href="/forgot-password" class="mono text-[9px] uppercase tracking-wider text-slate-400 hover:text-pink-600 transition-colors font-bold">Forgot Password?</a>
                     </div>
                 </div>
 
-                <div id="error-msg" class="hidden flex items-start space-x-2 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs">
+                <div id="error-msg" class="hidden flex items-start space-x-2 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs">
                     <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
                     <span id="error-text">Invalid credentials provided.</span>
                 </div>
 
-                <button type="submit" id="submit-btn" class="gradient-btn w-full py-4 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] flex items-center justify-center space-x-3">
+                <button type="submit" id="submit-btn" class="gradient-btn w-full py-4 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] flex items-center justify-center space-x-3 shadow-lg shadow-pink-500/20">
                     <span>Access Portal</span>
                     <div class="spinner" id="btn-spinner"></div>
                 </button>
             </form>
 
-            <div class="mt-8 pt-8 border-t border-white/5 text-center">
-                <p class="text-gray-500 text-xs">Trouble accessing your account?</p>
-                <a href="#" class="text-pink-500 font-bold text-xs mt-2 inline-block hover:underline">Contact Administrator</a>
+            <div class="mt-8 pt-8 border-t border-slate-100 text-center">
+                <p class="text-slate-400 text-xs font-medium">Trouble accessing your account?</p>
+                <a href="#" class="text-pink-600 font-bold text-xs mt-2 inline-block hover:text-pink-700 transition-colors">Contact Administrator</a>
             </div>
         </div>
     </div>
@@ -234,21 +255,46 @@
                 const scene = new THREE.Scene();
                 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
                 camera.position.z = 100;
+                
                 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
                 renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
                 container.appendChild(renderer.domElement);
+
                 const particles = new THREE.BufferGeometry();
-                const posArr = new Float32Array(1500 * 3);
-                for(let i=0; i<4500; i++) posArr[i] = (Math.random() - 0.5) * 400;
+                const particleCount = 1200;
+                const posArr = new Float32Array(particleCount * 3);
+                
+                for(let i=0; i<particleCount * 3; i++) {
+                    posArr[i] = (Math.random() - 0.5) * 400;
+                }
+                
                 particles.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
-                const pSystem = new THREE.Points(particles, new THREE.PointsMaterial({ size: 0.6, color: 0xec4899, transparent: true, opacity: 0.2 }));
+                
+                // Use a soft pink color for particles in light mode
+                const pSystem = new THREE.Points(particles, new THREE.PointsMaterial({ 
+                    size: 0.8, 
+                    color: 0xec4899, 
+                    transparent: true, 
+                    opacity: 0.15 
+                }));
+                
                 scene.add(pSystem);
+
                 const animate = () => {
                     requestAnimationFrame(animate);
-                    pSystem.rotation.y += 0.0003;
+                    pSystem.rotation.y += 0.0004;
+                    pSystem.rotation.x += 0.0002;
                     renderer.render(scene, camera);
                 };
+                
                 animate();
+
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
             };
 
             document.addEventListener('DOMContentLoaded', () => {

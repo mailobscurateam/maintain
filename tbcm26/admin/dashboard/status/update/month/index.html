@@ -250,7 +250,11 @@
             setLoading(true);
             try {
                 const updateData = { status: newStatus };
-                if (newStatus === 'approved') updateData.approved_at = new Date().toISOString();
+                if (newStatus === 'approved') {
+                    updateData.approved_at = new Date().toISOString();
+                } else if (newStatus === 'pending') {
+                    updateData.approved_at = null;
+                }
 
                 const { error } = await sb
                     .from('monthly_approvals')
@@ -321,6 +325,11 @@
                                 ${status !== 'approved' ? `
                                     <button onclick="updateStatus('${item.id}', 'approved')" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Approve">
                                         <i data-lucide="check" class="w-4 h-4"></i>
+                                    </button>
+                                ` : ''}
+                                ${status !== 'pending' ? `
+                                    <button onclick="updateStatus('${item.id}', 'pending')" class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Set to Pending">
+                                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                                     </button>
                                 ` : ''}
                                 ${status !== 'rejected' ? `

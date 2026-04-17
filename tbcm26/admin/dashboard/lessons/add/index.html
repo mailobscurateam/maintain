@@ -92,6 +92,7 @@
                                     <option value="youtube">YouTube</option>
                                     <option value="pdf">PDF</option>
                                     <option value="live">Live</option>
+                                    <option value="external">External Link</option>
                                 </select>
                             </div>
                             <div>
@@ -272,7 +273,7 @@
                     <div class="flex justify-between items-start">
                         <div>
                             <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-2 ${getTypeStyle(lesson.lesson_type)}">
-                                ${lesson.lesson_type}
+                                ${lesson.lesson_type === 'external' ? 'External Link' : lesson.lesson_type}
                             </span>
                             <h3 class="font-bold text-slate-800">${lesson.title}</h3>
                             <p class="text-xs text-slate-500 mt-1 line-clamp-1">${lesson.description || 'No description provided.'}</p>
@@ -327,6 +328,7 @@
                 case 'youtube': return 'bg-red-50 text-red-600';
                 case 'zoom': return 'bg-blue-50 text-blue-600';
                 case 'pdf': return 'bg-orange-50 text-orange-600';
+                case 'external': return 'bg-emerald-50 text-emerald-600';
                 default: return 'bg-indigo-50 text-indigo-600';
             }
         }
@@ -436,7 +438,7 @@
                     categories: formData.get('categories'),
                     title: formData.get('title'),
                     description: formData.get('description'),
-                    lesson_type: currentType,
+                    lesson_type: currentType, // Will be "external" if selected
                     video_url: formData.get('video_url'),
                     watchtime_hours: parseInt(formData.get('watchtime_hours')) || 0,
                     watchtime_minutes: parseInt(formData.get('watchtime_minutes')) || 0,

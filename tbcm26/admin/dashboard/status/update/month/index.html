@@ -7,18 +7,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-page: #0f0f12;
-            --bg-card: #1a1a1f;
-            --border: #2d2d35;
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent: #ef4444; /* Nexus Red */
         }
 
         body { 
             font-family: 'Inter', sans-serif; 
             background-color: var(--bg-page); 
-            color: #f8fafc;
+            color: var(--text-main);
             -webkit-font-smoothing: antialiased;
         }
 
@@ -27,6 +30,7 @@
         .admin-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
         }
 
         .table-row {
@@ -35,98 +39,146 @@
         }
 
         .table-row:hover {
-            background: rgba(255, 255, 255, 0.02);
+            background: #f1f5f9;
         }
 
-        .btn-action {
-            transition: all 0.2s;
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
         }
 
-        .btn-action:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .search-input {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        .search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="min-h-screen pb-20">
-    <nav class="sticky top-0 z-50 bg-[#0f0f12]/80 backdrop-blur-md border-b border-[#2d2d35]">
+    <!-- Top Navigation -->
+    <nav class="sticky top-0 z-50 glass-nav">
         <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3 text-white font-bold text-xl">
-                <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
-                    <i data-lucide="check-square" class="w-5 h-5 text-white"></i>
+            <div class="flex items-center gap-8">
+                <div class="flex items-center gap-3 text-slate-900 font-bold text-xl">
+                    <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-500/20">
+                        <i data-lucide="check-square" class="w-5 h-5 text-white"></i>
+                    </div>
+                    Nexus Admin
                 </div>
-                Nexus Monthly Admin
+                
+                <!-- Desktop Back to Dashboard -->
+                <a href="index.html" class="hidden md:flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-red-600 transition-colors group">
+                    <i data-lucide="arrow-left" class="w-4 h-4 group-hover:-translate-x-1 transition-transform"></i>
+                    Back to Dashboard
+                </a>
             </div>
-            <div class="flex items-center gap-4">
-                <button onclick="fetchData()" class="p-2 hover:bg-slate-800 rounded-lg text-slate-400">
+
+            <div class="flex items-center gap-3">
+                <button onclick="fetchData()" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-900 transition-all">
                     <i data-lucide="refresh-cw" class="w-5 h-5" id="refresh-icon"></i>
+                </button>
+                <div class="h-6 w-[1px] bg-slate-200 mx-1"></div>
+                <button class="px-4 py-2 text-sm font-bold text-slate-700 hover:text-red-600 transition-all">
+                    Sign Out
                 </button>
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-6 py-12">
+        <!-- Breadcrumbs (Mobile) -->
+        <div class="md:hidden flex items-center gap-2 text-xs text-slate-400 mb-6">
+            <a href="index.html">Dashboard</a>
+            <i data-lucide="chevron-right" class="w-3 h-3"></i>
+            <span class="text-slate-900 font-semibold">Approvals</span>
+        </div>
+
         <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-                <h1 class="text-3xl font-extrabold text-white mb-2">Monthly Activations</h1>
-                <p class="text-slate-400">Review and manage student requests for specific curriculum months.</p>
+                <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Monthly Activations</h1>
+                <p class="text-slate-500">Review and manage student access requests for specific curriculum modules.</p>
             </div>
-            <div class="flex gap-3">
-                <div class="relative">
-                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                    <input type="text" id="search-input" placeholder="Search by email or course..." 
-                           class="bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-red-500 w-64">
-                </div>
+            
+            <div class="relative w-full md:w-auto">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="search-input" placeholder="Search email or course..." 
+                       class="search-input rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none w-full md:w-80">
             </div>
         </header>
 
-        <!-- Stats Bar -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div class="admin-card p-4 rounded-xl">
-                <p class="text-slate-500 text-xs font-bold uppercase mb-1">Total Requests</p>
-                <p id="stat-total" class="text-xl font-bold">0</p>
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+            <div class="admin-card p-6 rounded-2xl">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="p-2 bg-slate-100 rounded-lg text-slate-600"><i data-lucide="layers" class="w-4 h-4"></i></div>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Total Requests</p>
+                </div>
+                <p id="stat-total" class="text-3xl font-bold text-slate-900">0</p>
             </div>
-            <div class="admin-card p-4 rounded-xl border-l-4 border-l-amber-500">
-                <p class="text-amber-500 text-xs font-bold uppercase mb-1">Pending</p>
-                <p id="stat-pending" class="text-xl font-bold">0</p>
+            <div class="admin-card p-6 rounded-2xl border-t-4 border-t-amber-500">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="p-2 bg-amber-50 rounded-lg text-amber-600"><i data-lucide="clock" class="w-4 h-4"></i></div>
+                    <p class="text-amber-600 text-[10px] font-bold uppercase tracking-wider">Pending Review</p>
+                </div>
+                <p id="stat-pending" class="text-3xl font-bold text-slate-900">0</p>
             </div>
-            <div class="admin-card p-4 rounded-xl border-l-4 border-l-emerald-500">
-                <p class="text-emerald-500 text-xs font-bold uppercase mb-1">Approved</p>
-                <p id="stat-approved" class="text-xl font-bold">0</p>
+            <div class="admin-card p-6 rounded-2xl border-t-4 border-t-emerald-500">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600"><i data-lucide="user-check" class="w-4 h-4"></i></div>
+                    <p class="text-emerald-600 text-[10px] font-bold uppercase tracking-wider">Total Approved</p>
+                </div>
+                <p id="stat-approved" class="text-3xl font-bold text-slate-900">0</p>
             </div>
-            <div class="admin-card p-4 rounded-xl border-l-4 border-l-red-500">
-                <p class="text-red-500 text-xs font-bold uppercase mb-1">Rejected</p>
-                <p id="stat-rejected" class="text-xl font-bold">0</p>
+            <div class="admin-card p-6 rounded-2xl border-t-4 border-t-red-500">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="p-2 bg-red-50 rounded-lg text-red-600"><i data-lucide="user-x" class="w-4 h-4"></i></div>
+                    <p class="text-red-600 text-[10px] font-bold uppercase tracking-wider">Total Rejected</p>
+                </div>
+                <p id="stat-rejected" class="text-3xl font-bold text-slate-900">0</p>
             </div>
         </div>
 
-        <div class="admin-card rounded-2xl overflow-hidden shadow-2xl">
+        <!-- Table Section -->
+        <div class="admin-card rounded-2xl overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-slate-900/50 text-slate-500 text-xs font-bold uppercase tracking-widest">
-                            <th class="px-6 py-4">Student Email</th>
-                            <th class="px-6 py-4">Course</th>
-                            <th class="px-6 py-4">Month</th>
-                            <th class="px-6 py-4">Status</th>
-                            <th class="px-6 py-4">Requested On</th>
-                            <th class="px-6 py-4 text-right">Actions</th>
+                        <tr class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-[0.15em] border-bottom border-slate-200">
+                            <th class="px-6 py-5">Student Information</th>
+                            <th class="px-6 py-5">Curriculum</th>
+                            <th class="px-6 py-5 text-center">Month</th>
+                            <th class="px-6 py-5">Status</th>
+                            <th class="px-6 py-5 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="admin-tbody" class="text-sm">
                         <!-- Content loaded via JS -->
+                        <tr><td colspan="5" class="px-6 py-20 text-center"><div class="inline-block w-6 h-6 border-2 border-slate-200 border-t-red-500 rounded-full animate-spin"></div></td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
-
-        <div id="loading-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-[100]">
-            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 flex flex-col items-center gap-4">
-                <div class="w-10 h-10 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin"></div>
-                <p class="text-white font-medium">Updating Record...</p>
-            </div>
-        </div>
     </main>
+
+    <!-- Global Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden z-[100]">
+        <div class="bg-white p-8 rounded-3xl border border-slate-200 flex flex-col items-center gap-4 shadow-2xl">
+            <div class="w-12 h-12 border-4 border-slate-100 border-t-red-500 rounded-full animate-spin"></div>
+            <p class="text-slate-900 font-bold">Processing Request...</p>
+        </div>
+    </div>
 
     <script>
         const SUPABASE_URL = 'https://tsaoxjzvhxiggntibpui.supabase.co';
@@ -146,8 +198,7 @@
                 const term = e.target.value.toLowerCase();
                 const filtered = masterData.filter(item => 
                     item.user_email?.toLowerCase().includes(term) || 
-                    item.courses?.name?.toLowerCase().includes(term) ||
-                    item.user_id.toLowerCase().includes(term)
+                    item.courses?.name?.toLowerCase().includes(term)
                 );
                 renderTable(filtered);
             });
@@ -158,44 +209,31 @@
             refreshIcon.classList.add('animate-spin');
 
             try {
-                // Fetch activation requests first without the direct join to profiles
                 const { data: approvals, error: approvalsError } = await sb
                     .from('monthly_approvals')
-                    .select(`
-                        id,
-                        user_id,
-                        course_id,
-                        month_number,
-                        status,
-                        created_at,
-                        courses ( name )
-                    `)
+                    .select(`id, user_id, course_id, month_number, status, created_at, courses ( name )`)
                     .order('created_at', { ascending: false });
 
                 if (approvalsError) throw approvalsError;
 
-                // Fetch all profiles to map emails manually (avoids schema cache relationship errors)
                 const { data: profiles, error: profilesError } = await sb
                     .from('profiles')
                     .select('id, email');
 
                 if (profilesError) throw profilesError;
 
-                // Create a lookup map for faster processing
                 const profileMap = {};
                 profiles.forEach(p => profileMap[p.id] = p.email);
 
-                // Merge the data in-memory
                 masterData = approvals.map(item => ({
                     ...item,
-                    user_email: profileMap[item.user_id] || 'Unknown Student'
+                    user_email: profileMap[item.user_id] || 'N/A'
                 }));
 
                 updateStats(masterData);
                 renderTable(masterData);
             } catch (err) {
                 console.error(err);
-                alert("Error fetching data: " + err.message);
             } finally {
                 refreshIcon.classList.remove('animate-spin');
             }
@@ -212,9 +250,7 @@
             setLoading(true);
             try {
                 const updateData = { status: newStatus };
-                if (newStatus === 'approved') {
-                    updateData.approved_at = new Date().toISOString();
-                }
+                if (newStatus === 'approved') updateData.approved_at = new Date().toISOString();
 
                 const { error } = await sb
                     .from('monthly_approvals')
@@ -224,22 +260,17 @@
                 if (error) throw error;
                 await fetchData();
             } catch (err) {
-                alert("Failed to update status: " + err.message);
+                alert(err.message);
             } finally {
                 setLoading(false);
             }
         }
 
         async function deleteRequest(id) {
-            if (!confirm("Are you sure you want to delete this activation request?")) return;
-            
+            if (!confirm("Remove this request entirely?")) return;
             setLoading(true);
             try {
-                const { error } = await sb
-                    .from('monthly_approvals')
-                    .delete()
-                    .eq('id', id);
-
+                const { error } = await sb.from('monthly_approvals').delete().eq('id', id);
                 if (error) throw error;
                 await fetchData();
             } catch (err) {
@@ -252,63 +283,53 @@
         function renderTable(data) {
             const tbody = document.getElementById('admin-tbody');
             if (!data.length) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-20 text-center text-slate-500 italic">No activation requests found</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-20 text-center text-slate-400 italic">No activation requests found.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = data.map(item => {
                 const status = item.status || 'pending';
-                const date = new Date(item.created_at).toLocaleDateString();
-                const courseName = item.courses?.name || 'Unknown Course';
-                const monthName = MONTH_NAMES[item.month_number - 1] || `Month ${item.month_number}`;
-                const userEmail = item.user_email;
+                const courseName = item.courses?.name || 'Unknown';
+                const monthName = MONTH_NAMES[item.month_number - 1] || `M${item.month_number}`;
                 
                 return `
                     <tr class="table-row">
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-5">
                             <div class="flex flex-col">
-                                <span class="text-white font-medium">${userEmail}</span>
-                                <span class="text-[10px] text-slate-600 font-mono tracking-tighter">UID: ${item.user_id.substring(0, 12)}...</span>
+                                <span class="text-slate-900 font-bold text-sm">${item.user_email}</span>
+                                <span class="text-[10px] text-slate-400 font-mono mt-0.5 tracking-tight">${item.user_id}</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-slate-300 font-medium">${courseName}</td>
-                        <td class="px-6 py-4">
-                            <span class="px-2 py-1 bg-slate-800 rounded text-xs font-bold text-slate-300">
+                        <td class="px-6 py-5">
+                            <span class="text-slate-600 font-semibold text-sm">${courseName}</span>
+                        </td>
+                        <td class="px-6 py-5 text-center">
+                            <span class="inline-flex px-2.5 py-1 bg-slate-100 rounded-md text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                                 ${monthName}
                             </span>
                         </td>
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider
-                                ${status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : 
-                                  status === 'pending' ? 'bg-amber-500/10 text-amber-500' : 
-                                  'bg-red-500/10 text-red-500'}">
+                        <td class="px-6 py-5">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest
+                                ${status === 'approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
+                                  status === 'pending' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 
+                                  'bg-red-50 text-red-600 border border-red-100'}">
                                 ${status}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-slate-500 text-xs">${date}</td>
-                        <td class="px-6 py-4 text-right">
+                        <td class="px-6 py-5 text-right">
                             <div class="flex items-center justify-end gap-2">
                                 ${status !== 'approved' ? `
-                                    <button onclick="updateStatus('${item.id}', 'approved')" class="btn-action p-2 bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white rounded-lg" title="Approve">
+                                    <button onclick="updateStatus('${item.id}', 'approved')" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Approve">
                                         <i data-lucide="check" class="w-4 h-4"></i>
                                     </button>
                                 ` : ''}
-                                
                                 ${status !== 'rejected' ? `
-                                    <button onclick="updateStatus('${item.id}', 'rejected')" class="btn-action p-2 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white rounded-lg" title="Reject">
+                                    <button onclick="updateStatus('${item.id}', 'rejected')" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Reject">
                                         <i data-lucide="x" class="w-4 h-4"></i>
                                     </button>
                                 ` : ''}
-
-                                ${status !== 'pending' ? `
-                                    <button onclick="updateStatus('${item.id}', 'pending')" class="btn-action p-2 bg-amber-600/10 text-amber-500 hover:bg-amber-600 hover:text-white rounded-lg" title="Reset to Pending">
-                                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                                    </button>
-                                ` : ''}
-                                
-                                <div class="w-[1px] h-4 bg-slate-800 mx-1"></div>
-                                
-                                <button onclick="deleteRequest('${item.id}')" class="btn-action p-2 bg-slate-800 text-slate-500 hover:bg-red-600 hover:text-white rounded-lg" title="Delete">
+                                <div class="w-[1px] h-4 bg-slate-200 mx-1"></div>
+                                <button onclick="deleteRequest('${item.id}')" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
                             </div>

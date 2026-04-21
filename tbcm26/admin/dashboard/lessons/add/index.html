@@ -30,6 +30,11 @@
             border-radius: 10px;
         }
         [v-cloak] { display: none; }
+        
+        /* Modal transitions */
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
@@ -39,6 +44,26 @@
         <div class="text-center">
             <i class="fas fa-circle-notch fa-spin text-4xl text-indigo-600 mb-4"></i>
             <p class="text-slate-600 font-medium">Verifying Session...</p>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
+        <div class="bg-white rounded-2xl p-6 shadow-2xl relative w-full max-w-sm transform transition-all">
+            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4 mx-auto">
+                <i class="fas fa-exclamation-triangle text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 text-center mb-2">Delete Lesson?</h3>
+            <p class="text-slate-500 text-center text-sm mb-6">This action cannot be undone. All data associated with this lesson will be permanently removed.</p>
+            <div class="flex space-x-3">
+                <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">
+                    Cancel
+                </button>
+                <button id="confirmDeleteBtn" class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors flex items-center justify-center">
+                    <span>Delete</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -164,7 +189,7 @@
                             <h2 class="text-xl font-bold text-slate-800">Course Lessons</h2>
                             <span id="lessonCount" class="bg-indigo-50 text-indigo-600 text-[10px] uppercase font-bold px-3 py-1 rounded-full">0 Lessons</span>
                         </div>
-                        <!-- NEW: Category Filter -->
+                        <!-- Category Filter -->
                         <div class="relative w-full md:w-48">
                             <i class="fas fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                             <select id="categoryFilter" class="w-full pl-8 pr-4 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all appearance-none cursor-pointer">
@@ -205,13 +230,16 @@
         const submitBtn = document.getElementById('submitBtn');
         const authGuard = document.getElementById('authGuard');
         const logoutBtn = document.getElementById('logoutBtn');
+        const deleteModal = document.getElementById('deleteModal');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
         // Cache Keys
         const CACHE_COURSE_KEY = 'last_selected_course_id';
         const CACHE_TYPE_KEY = 'last_selected_lesson_type';
 
-        // Local State for Filtering
+        // Local State
         let allLessons = [];
+        let lessonToDeleteId = null;
 
         async function checkUser() {
             const { data: { session }, error } = await supabase.auth.getSession();
@@ -226,6 +254,44 @@
         logoutBtn.addEventListener('click', async () => {
             await supabase.auth.signOut();
             window.location.href = '/login';
+        });
+
+        // Global functions for delete modal
+        window.openDeleteModal = function(id) {
+            lessonToDeleteId = id;
+            deleteModal.classList.remove('hidden');
+            deleteModal.classList.add('flex');
+        };
+
+        window.closeDeleteModal = function() {
+            lessonToDeleteId = null;
+            deleteModal.classList.add('hidden');
+            deleteModal.classList.remove('flex');
+        };
+
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (!lessonToDeleteId) return;
+            
+            confirmDeleteBtn.disabled = true;
+            confirmDeleteBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+
+            try {
+                const { error } = await supabase
+                    .from('lessons')
+                    .delete()
+                    .eq('id', lessonToDeleteId);
+
+                if (error) throw error;
+
+                showMessage('Lesson deleted successfully', 'success');
+                fetchLessons(courseSelect.value);
+                closeDeleteModal();
+            } catch (err) {
+                showMessage(`Error deleting: ${err.message}`, 'error');
+            } finally {
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.innerHTML = '<span>Delete</span>';
+            }
         });
 
         // Populate Category Filter dropdown based on current lesson list
@@ -247,7 +313,6 @@
                 categoryFilter.appendChild(option);
             });
 
-            // Re-select previous value if it still exists
             if (Array.from(categories).includes(currentVal)) {
                 categoryFilter.value = currentVal;
             }
@@ -269,8 +334,8 @@
             }
 
             lessonsList.innerHTML = filtered.map(lesson => `
-                <div class="p-4 bg-white border border-slate-100 rounded-xl hover:border-indigo-200 hover:shadow-md transition-all group">
-                    <div class="flex justify-between items-start">
+                <div class="p-4 bg-white border border-slate-100 rounded-xl hover:border-indigo-200 hover:shadow-md transition-all group relative">
+                    <div class="flex justify-between items-start pr-8">
                         <div>
                             <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-2 ${getTypeStyle(lesson.lesson_type)}">
                                 ${lesson.lesson_type === 'external' ? 'External Link' : lesson.lesson_type}
@@ -285,6 +350,14 @@
                             </span>
                         </div>
                     </div>
+
+                    <!-- Delete Button -->
+                    <button onclick="openDeleteModal('${lesson.id}')" 
+                        class="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-2"
+                        title="Delete Lesson">
+                        <i class="fas fa-trash-alt text-sm"></i>
+                    </button>
+
                     <div class="mt-3 pt-3 border-t border-slate-50 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <span class="text-[10px] text-indigo-500 font-medium truncate max-w-[200px]">${lesson.categories}</span>
                         <a href="${lesson.video_url}" target="_blank" class="text-indigo-600 text-xs font-bold hover:underline">
@@ -352,7 +425,6 @@
                         courseSelect.appendChild(option);
                     });
 
-                    // Restore cached course
                     const cachedCourseId = localStorage.getItem(CACHE_COURSE_KEY);
                     const foundation = data.find(c => c.name.toLowerCase().includes('foundation'));
                     
@@ -365,12 +437,11 @@
 
                     courseSelect.value = targetId;
                     
-                    // Restore cached lesson type
                     const cachedType = localStorage.getItem(CACHE_TYPE_KEY);
                     if (cachedType) {
                         lessonTypeSelect.value = cachedType;
                     } else {
-                        lessonTypeSelect.value = 'live'; // Default
+                        lessonTypeSelect.value = 'live'; 
                     }
 
                     fetchLessons(targetId);
@@ -380,10 +451,9 @@
             }
         }
 
-        // Listeners for persistence and filtering
         courseSelect.addEventListener('change', (e) => {
             localStorage.setItem(CACHE_COURSE_KEY, e.target.value);
-            categoryFilter.value = ""; // Clear filter on course change
+            categoryFilter.value = ""; 
             fetchLessons(e.target.value);
         });
 
@@ -431,14 +501,13 @@
             try {
                 const formData = new FormData(lessonForm);
                 const currentCourseId = formData.get('course_id');
-                const currentType = formData.get('lesson_type');
                 
                 const lessonPayload = {
                     course_id: currentCourseId,
                     categories: formData.get('categories'),
                     title: formData.get('title'),
                     description: formData.get('description'),
-                    lesson_type: currentType, // Will be "external" if selected
+                    lesson_type: formData.get('lesson_type'),
                     video_url: formData.get('video_url'),
                     watchtime_hours: parseInt(formData.get('watchtime_hours')) || 0,
                     watchtime_minutes: parseInt(formData.get('watchtime_minutes')) || 0,
@@ -450,7 +519,6 @@
 
                 showMessage('Lesson added successfully!', 'success');
                 
-                // Preserve selections but reset textual fields
                 const preservedCourse = lessonForm.course_id.value;
                 const preservedMonth = lessonForm.month.value;
                 const preservedType = lessonForm.lesson_type.value;

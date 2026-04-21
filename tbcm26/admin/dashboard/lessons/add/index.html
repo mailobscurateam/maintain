@@ -91,20 +91,22 @@
                             <option value="external">External Link</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Month</label>
-                        <select name="month" id="edit_month" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                            <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
-                            <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
-                            <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
-                            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Year</label>
-                        <select name="year" id="edit_year" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                            <!-- Populated via JS -->
-                        </select>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Month</label>
+                            <select name="month" id="edit_month" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                                <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                                <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                                <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Year</label>
+                            <select name="year" id="edit_year" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                <!-- Populated via JS -->
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div>
@@ -186,21 +188,23 @@
                                     <option value="external">External Link</option>
                                 </select>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Month</label>
-                                <select name="month" id="monthSelect" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all">
-                                    <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
-                                    <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
-                                    <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
-                                    <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
-                                </select>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Month</label>
+                                    <select name="month" id="monthSelect" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all">
+                                        <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                                        <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                                        <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                                        <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Year</label>
+                                    <select name="year" id="yearSelect" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all">
+                                        <!-- Populated via JS -->
+                                    </select>
+                                </div>
                             </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Year</label>
-                            <select name="year" id="yearSelect" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all">
-                                <!-- Populated via JS -->
-                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Topics / Categories</label>
@@ -243,13 +247,23 @@
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
                         <div>
                             <h2 class="text-xl font-bold text-slate-800">Course Lessons</h2>
-                            <span id="lessonCount" class="bg-indigo-50 text-indigo-600 text-[10px] uppercase font-bold px-3 py-1 rounded-full">0 Lessons</span>
+                            <div class="flex items-center space-x-2 mt-1">
+                                <span id="lessonCount" class="bg-indigo-50 text-indigo-600 text-[10px] uppercase font-bold px-3 py-1 rounded-full">0 Lessons</span>
+                                <span id="activeFilterBadge" class="hidden bg-amber-50 text-amber-600 text-[10px] uppercase font-bold px-3 py-1 rounded-full flex items-center">
+                                    <i class="fas fa-filter mr-1"></i> Filtering by Date
+                                </span>
+                            </div>
                         </div>
-                        <div class="relative w-full md:w-48">
-                            <i class="fas fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                            <select id="categoryFilter" class="w-full pl-8 pr-4 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all appearance-none cursor-pointer">
-                                <option value="">All Categories</option>
-                            </select>
+                        <div class="flex space-x-2">
+                            <button id="clearDateFilter" class="hidden px-3 py-2 text-xs font-medium text-slate-500 hover:text-red-500 transition-colors">
+                                Clear Date Filter
+                            </button>
+                            <div class="relative w-full md:w-48">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <select id="categoryFilter" class="w-full pl-8 pr-4 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all appearance-none cursor-pointer">
+                                    <option value="">All Categories</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -275,10 +289,14 @@
         const lessonForm = document.getElementById('lessonForm');
         const editLessonForm = document.getElementById('editLessonForm');
         const courseSelect = document.getElementById('courseSelect');
+        const monthSelect = document.getElementById('monthSelect');
+        const yearSelect = document.getElementById('yearSelect');
         const lessonTypeSelect = document.getElementById('lessonTypeSelect');
         const categoryFilter = document.getElementById('categoryFilter');
         const lessonsList = document.getElementById('lessonsList');
         const lessonCount = document.getElementById('lessonCount');
+        const activeFilterBadge = document.getElementById('activeFilterBadge');
+        const clearDateFilter = document.getElementById('clearDateFilter');
         const statusMessage = document.getElementById('statusMessage');
         const statusText = document.getElementById('statusText');
         const statusIcon = document.getElementById('statusIcon');
@@ -291,10 +309,10 @@
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
         const CACHE_COURSE_KEY = 'last_selected_course_id';
-        const CACHE_TYPE_KEY = 'last_selected_lesson_type';
 
         let allLessons = [];
         let lessonToDeleteId = null;
+        let isFilteringByFormDate = true; // Default to filtering based on form inputs
 
         // YEAR POPULATION
         function populateYears() {
@@ -429,13 +447,39 @@
         }
 
         function renderLessons(lessons) {
-            const filtered = categoryFilter.value 
-                ? lessons.filter(l => l.categories?.toLowerCase().includes(categoryFilter.value.toLowerCase()))
-                : lessons;
+            let filtered = lessons;
+
+            // Apply Category Search Filter
+            if (categoryFilter.value) {
+                filtered = filtered.filter(l => l.categories?.toLowerCase().includes(categoryFilter.value.toLowerCase()));
+            }
+
+            // Apply Form Date Filter (Month/Year) if active
+            if (isFilteringByFormDate) {
+                const targetMonth = parseInt(monthSelect.value);
+                const targetYear = parseInt(yearSelect.value);
+                
+                filtered = filtered.filter(l => 
+                    parseInt(l.month) === targetMonth && 
+                    parseInt(l.year) === targetYear
+                );
+                
+                activeFilterBadge.classList.remove('hidden');
+                clearDateFilter.classList.remove('hidden');
+            } else {
+                activeFilterBadge.classList.add('hidden');
+                clearDateFilter.classList.add('hidden');
+            }
 
             lessonCount.textContent = `${filtered.length} Lessons`;
+            
             if (filtered.length === 0) {
-                lessonsList.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-400 border-2 border-dashed border-slate-100 rounded-xl"><p>No lessons matching criteria.</p></div>`;
+                lessonsList.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-slate-400 border-2 border-dashed border-slate-100 rounded-xl p-8">
+                        <i class="fas fa-calendar-times text-4xl mb-3 opacity-20"></i>
+                        <p class="text-sm">No lessons found for this month/year.</p>
+                        ${isFilteringByFormDate ? '<button onclick="window.disableDateFilter()" class="mt-4 text-xs font-bold text-indigo-600 hover:underline">Show All Lessons</button>' : ''}
+                    </div>`;
                 return;
             }
 
@@ -517,6 +561,17 @@
             } catch (err) { courseSelect.innerHTML = '<option>Error</option>'; }
         }
 
+        // Automatic Filtering Observers
+        monthSelect.addEventListener('change', () => {
+            isFilteringByFormDate = true;
+            renderLessons(allLessons);
+        });
+
+        yearSelect.addEventListener('change', () => {
+            isFilteringByFormDate = true;
+            renderLessons(allLessons);
+        });
+
         courseSelect.addEventListener('change', (e) => {
             localStorage.setItem(CACHE_COURSE_KEY, e.target.value);
             categoryFilter.value = ""; 
@@ -524,6 +579,14 @@
         });
 
         categoryFilter.addEventListener('change', () => renderLessons(allLessons));
+
+        // Global disable filter function for "Clear" button
+        window.disableDateFilter = function() {
+            isFilteringByFormDate = false;
+            renderLessons(allLessons);
+        };
+
+        clearDateFilter.addEventListener('click', window.disableDateFilter);
 
         window.addEventListener('DOMContentLoaded', async () => {
             populateYears();
@@ -562,9 +625,20 @@
                 const { error } = await supabase.from('lessons').insert([payload]);
                 if (error) throw error;
                 showMessage('Lesson added!', 'success');
-                const pC = lessonForm.course_id.value, pM = lessonForm.month.value, pT = lessonForm.lesson_type.value, pY = lessonForm.year.value;
+                
+                // Keep the date selections but clear the other fields
+                const pC = lessonForm.course_id.value;
+                const pM = lessonForm.month.value;
+                const pT = lessonForm.lesson_type.value;
+                const pY = lessonForm.year.value;
+                
                 lessonForm.reset();
-                lessonForm.course_id.value = pC; lessonForm.month.value = pM; lessonForm.lesson_type.value = pT; lessonForm.year.value = pY;
+                
+                lessonForm.course_id.value = pC; 
+                lessonForm.month.value = pM; 
+                lessonForm.lesson_type.value = pT; 
+                lessonForm.year.value = pY;
+                
                 fetchLessons(pC);
             } catch (err) { showMessage(err.message, 'error'); }
             finally { submitBtn.disabled = false; submitBtn.innerHTML = 'Create Lesson <i class="fas fa-plus-circle ml-2"></i>'; }

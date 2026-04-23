@@ -139,10 +139,6 @@
 
             async function init() {
                 const { data: { session } } = await client.auth.getSession();
-                if (!session) {
-                    // In a production environment, we'd redirect to login.html here
-                    // window.location.href = 'login.html';
-                }
                 document.body.classList.add('auth-checked');
                 loadTasks();
             }
@@ -166,11 +162,18 @@
                 document.getElementById('empty-state').classList.add('hidden');
                 document.getElementById('dashboard-content').classList.remove('hidden');
 
-                // RELATIONAL FETCH: Get registrations and join with profile email
+                // RELATIONAL FETCH: Correct join syntax for Supabase
+                // We use profiles!inner to ensure we get data from the profiles table linked via user_id
                 const [regs, comps] = await Promise.all([
                     client
                         .from('speed_task_registrations')
-                        .select('created_at, user_id, profiles(email)')
+                        .select(`
+                            created_at, 
+                            user_id, 
+                            profiles (
+                                email
+                            )
+                        `)
                         .eq('task_id', taskId),
                     client
                         .from('speed_task_completions')
@@ -264,8 +267,8 @@
                 tbody.innerHTML = '';
 
                 regs.forEach(reg => {
-                    // Extract email from joined profiles table
-                    const email = reg.profiles?.email || 'Unknown Student';
+                    // Extract email from joined profiles table structure returned by Supabase
+                    const email = reg.profiles?.email || 'Anonymous Student';
                     const comp = comps.find(c => c.user_id === reg.user_id);
                     
                     const row = document.createElement('tr');

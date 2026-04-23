@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speed Task Admin - Single Task Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; opacity: 0; transition: opacity 0.3s ease; }
+        body.auth-checked { opacity: 1; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .select-custom {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+        }
+    </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-900 min-h-screen">
+
+    <div id="app-container" class="max-w-7xl mx-auto px-4 py-8 md:px-8">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <a href="index.html" class="bg-slate-900 p-2.5 rounded-xl text-white shadow-lg hover:bg-indigo-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                    </a>
+                    <h1 class="text-3xl font-black text-slate-900 tracking-tight">Task <span class="text-indigo-600">Deep-Dive</span></h1>
+                </div>
+                <p class="text-slate-500 font-medium ml-12">Granular performance analysis per module</p>
+            </div>
+
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <div class="relative flex-grow md:w-80">
+                    <select id="task-selector" class="select-custom w-full pl-5 pr-12 py-4 bg-white border border-slate-200 rounded-[1.5rem] shadow-sm text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all">
+                        <option value="" disabled selected>Loading tasks...</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <!-- Loading State -->
+        <div id="empty-state" class="flex flex-col items-center justify-center py-20 bg-white rounded-[3rem] border border-dashed border-slate-300">
+            <div class="bg-slate-100 p-6 rounded-full mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800">Select a Task</h3>
+            <p class="text-slate-500">Choose a task from the dropdown to view metrics</p>
+        </div>
+
+        <!-- Dashboard Content (Hidden by default) -->
+        <div id="dashboard-content" class="hidden animate-slide-up">
+            <!-- Summary Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-card p-8 rounded-[2.5rem]">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Students</p>
+                    <h2 id="metric-students" class="text-4xl font-black text-slate-900">0</h2>
+                    <div class="mt-4 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div id="progress-reg" class="h-full bg-indigo-500 transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-[2.5rem]">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Completion Rate</p>
+                    <div class="flex items-baseline gap-2">
+                        <h2 id="metric-rate" class="text-4xl font-black text-emerald-600">0%</h2>
+                    </div>
+                    <p class="text-xs font-bold text-slate-400 mt-2">Conversion from start to finish</p>
+                </div>
+                <div class="glass-card p-8 rounded-[2.5rem]">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Avg. Score</p>
+                    <h2 id="metric-avg-score" class="text-4xl font-black text-orange-500">0%</h2>
+                    <p class="text-xs font-bold text-slate-400 mt-2">Overall cohort accuracy</p>
+                </div>
+            </div>
+
+            <!-- Visualization Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
+                    <h3 class="text-xl font-black text-slate-800 mb-6">Score Distribution</h3>
+                    <div class="h-64">
+                        <canvas id="scoreChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
+                    <h3 class="text-xl font-black text-slate-800 mb-6">Engagement Over Time</h3>
+                    <div class="h-64">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student List -->
+            <div class="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-8 border-b border-slate-100">
+                    <h3 class="text-xl font-black text-slate-800 tracking-tight">Recent Student Activity</h3>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50/50">
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student Email</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Score</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Last Sync</th>
+                            </tr>
+                        </thead>
+                        <tbody id="student-list-body">
+                            <!-- Rows loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const SUPABASE_URL = 'https://tsaoxjzvhxiggntibpui.supabase.co'; 
+            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzYW94anp2aHhpZ2dudGlicHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDQ2OTAsImV4cCI6MjA5MTQyMDY5MH0.Q5Iu51O3NK4k2kcc_GoegnyAYIFIs2SUkQOV10qp2jI';
+            const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+            let tasks = [];
+            let scoreChart, timelineChart;
+
+            async function checkAuth() {
+                const { data: { session } } = await client.auth.getSession();
+                if (!session) {
+                    // Logic for redirect if needed
+                    document.body.classList.add('auth-checked'); // Proceeding for demo if file exists
+                } else {
+                    document.body.classList.add('auth-checked');
+                }
+                loadInitialData();
+            }
+
+            async function loadInitialData() {
+                const { data } = await client.from('speed_tasks').select('id, title, subject').order('title');
+                tasks = data || [];
+                
+                const selector = document.getElementById('task-selector');
+                selector.innerHTML = '<option value="" disabled selected>Choose a specific task...</option>';
+                
+                tasks.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = `[${t.subject}] ${t.title}`;
+                    selector.appendChild(opt);
+                });
+
+                selector.addEventListener('change', (e) => analyzeTask(e.target.value));
+            }
+
+            async function analyzeTask(taskId) {
+                document.getElementById('empty-state').classList.add('hidden');
+                document.getElementById('dashboard-content').classList.remove('hidden');
+
+                // Fetch data related to this task
+                const [regs, comps] = await Promise.all([
+                    client.from('speed_task_registrations').select('*').eq('task_id', taskId),
+                    client.from('speed_task_completions').select('*').eq('task_id', taskId)
+                ]);
+
+                const studentRegs = regs.data || [];
+                const completions = comps.data || [];
+
+                // Metrics
+                const totalStudents = studentRegs.length;
+                const totalCompletions = completions.length;
+                const rate = totalStudents > 0 ? Math.round((totalCompletions / totalStudents) * 100) : 0;
+                
+                let avgScore = 0;
+                if (totalCompletions > 0) {
+                    avgScore = Math.round(completions.reduce((acc, curr) => acc + (curr.score || 0), 0) / totalCompletions);
+                }
+
+                document.getElementById('metric-students').textContent = totalStudents;
+                document.getElementById('metric-rate').textContent = `${rate}%`;
+                document.getElementById('metric-avg-score').textContent = `${avgScore}%`;
+                document.getElementById('progress-reg').style.width = '100%';
+
+                renderCharts(completions, studentRegs);
+                renderStudentList(studentRegs, completions);
+            }
+
+            function renderCharts(completions, regs) {
+                // Score Distribution
+                const scoreRanges = ['0-20', '21-40', '41-60', '61-80', '81-100'];
+                const scoreCounts = [0, 0, 0, 0, 0];
+                
+                completions.forEach(c => {
+                    const s = c.score || 0;
+                    if (s <= 20) scoreCounts[0]++;
+                    else if (s <= 40) scoreCounts[1]++;
+                    else if (s <= 60) scoreCounts[2]++;
+                    else if (s <= 80) scoreCounts[3]++;
+                    else scoreCounts[4]++;
+                });
+
+                const ctxScore = document.getElementById('scoreChart').getContext('2d');
+                if (scoreChart) scoreChart.destroy();
+                scoreChart = new Chart(ctxScore, {
+                    type: 'bar',
+                    data: {
+                        labels: scoreRanges,
+                        datasets: [{
+                            label: 'Number of Students',
+                            data: scoreCounts,
+                            backgroundColor: '#6366f1',
+                            borderRadius: 12
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { display: false } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+
+                // Timeline Trend
+                const timeMap = {};
+                regs.forEach(r => {
+                    const d = new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    timeMap[d] = (timeMap[d] || 0) + 1;
+                });
+                
+                const labels = Object.keys(timeMap).slice(-10);
+                const ctxTime = document.getElementById('timelineChart').getContext('2d');
+                if (timelineChart) timelineChart.destroy();
+                timelineChart = new Chart(ctxTime, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Daily Signups',
+                            data: labels.map(l => timeMap[l]),
+                            borderColor: '#10b981',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 3,
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { display: false } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+
+            function renderStudentList(regs, completions) {
+                const tbody = document.getElementById('student-list-body');
+                tbody.innerHTML = '';
+
+                regs.forEach(reg => {
+                    const comp = completions.find(c => c.student_email === reg.student_email);
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0';
+                    
+                    const statusHtml = comp 
+                        ? `<span class="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full uppercase tracking-tighter">Completed</span>`
+                        : `<span class="px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-black rounded-full uppercase tracking-tighter">In Progress</span>`;
+
+                    row.innerHTML = `
+                        <td class="px-8 py-5 text-sm font-bold text-slate-800">${reg.student_email}</td>
+                        <td class="px-8 py-5">${statusHtml}</td>
+                        <td class="px-8 py-5 text-center text-sm font-black ${comp && comp.score >= 80 ? 'text-emerald-500' : 'text-slate-400'}">
+                            ${comp ? comp.score + '%' : '--'}
+                        </td>
+                        <td class="px-8 py-5 text-right text-xs font-medium text-slate-400">
+                            ${new Date(reg.created_at).toLocaleDateString()}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            checkAuth();
+        })();
+    </script>
+</body>
+</html>

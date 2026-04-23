@@ -171,9 +171,10 @@
                 const finalTotalSubtasks = totalSubtasksCount || 1; // Prevent division by zero
 
                 // Step 2: Fetch registration data and user subtask completions
+                // TABLE UPDATED: speed_subtask_completion
                 const [regsResponse, subCompsResponse] = await Promise.all([
                     client.from('speed_task_registrations').select('created_at, user_id').eq('task_id', taskId),
-                    client.from('speed_subtasks_completion').select('user_id').eq('speed_task_id', taskId)
+                    client.from('speed_subtask_completion').select('user_id').eq('speed_task_id', taskId)
                 ]);
 
                 const registrationData = regsResponse.data || [];

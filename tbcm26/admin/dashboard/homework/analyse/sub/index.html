@@ -114,7 +114,7 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-50/50">
-                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Profile Email</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student ID / Email</th>
                                 <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Progress Status</th>
                                 <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Final Score</th>
                                 <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Joined On</th>
@@ -162,34 +162,38 @@
                 document.getElementById('empty-state').classList.add('hidden');
                 document.getElementById('dashboard-content').classList.remove('hidden');
 
-                // RELATIONAL FETCH: Correct join syntax for Supabase
-                // We use profiles!inner to ensure we get data from the profiles table linked via user_id
-                const [regs, comps] = await Promise.all([
-                    client
-                        .from('speed_task_registrations')
-                        .select(`
-                            created_at, 
-                            user_id, 
-                            profiles (
-                                email
-                            )
-                        `)
-                        .eq('task_id', taskId),
-                    client
-                        .from('speed_task_completions')
-                        .select('*')
-                        .eq('task_id', taskId)
+                // We perform two separate fetches to ensure data is retrieved even if the join fails
+                const [regsResponse, compsResponse] = await Promise.all([
+                    client.from('speed_task_registrations').select('created_at, user_id').eq('task_id', taskId),
+                    client.from('speed_task_completions').select('*').eq('task_id', taskId)
                 ]);
 
-                const registrationData = regs.data || [];
-                const completionData = comps.data || [];
+                const registrationData = regsResponse.data || [];
+                const completionData = compsResponse.data || [];
+
+                // To get emails, we fetch profiles based on the user_ids found in registrations
+                const userIds = [...new Set(registrationData.map(r => r.user_id))];
+                let profilesMap = {};
+
+                if (userIds.length > 0) {
+                    const { data: profilesData } = await client
+                        .from('profiles')
+                        .select('id, email')
+                        .in('id', userIds);
+                    
+                    if (profilesData) {
+                        profilesData.forEach(p => {
+                            profilesMap[p.id] = p.email;
+                        });
+                    }
+                }
 
                 // Process Metrics
                 const total = registrationData.length;
                 const mastered = completionData.length;
                 const rate = total > 0 ? Math.round((mastered / total) * 100) : 0;
                 
-                // Calculated Mark: (Mastered Tasks / Total Registrations) * 100
+                // Calculated Mark: (Completed Task / Total Registrations) * 100
                 const completionMark = total > 0 ? Math.round((mastered / total) * 100) : 0;
 
                 document.getElementById('metric-students').textContent = total;
@@ -198,7 +202,7 @@
                 document.getElementById('row-count').textContent = `${total} Students`;
 
                 updateCharts(registrationData, completionData);
-                updateTable(registrationData, completionData);
+                updateTable(registrationData, completionData, profilesMap);
             }
 
             function updateCharts(regs, comps) {
@@ -262,13 +266,13 @@
                 });
             }
 
-            function updateTable(regs, comps) {
+            function updateTable(regs, comps, profilesMap) {
                 const tbody = document.getElementById('student-list-body');
                 tbody.innerHTML = '';
 
                 regs.forEach(reg => {
-                    // Extract email from joined profiles table structure returned by Supabase
-                    const email = reg.profiles?.email || 'Anonymous Student';
+                    // Get email from manual map or fallback to ID
+                    const email = profilesMap[reg.user_id] || reg.user_id || 'Anonymous Student';
                     const comp = comps.find(c => c.user_id === reg.user_id);
                     
                     const row = document.createElement('tr');
@@ -279,7 +283,7 @@
 
                     row.innerHTML = `
                         <td class="px-8 py-5">
-                            <span class="text-sm font-bold text-slate-800">${email}</span>
+                            <span class="text-sm font-bold text-slate-800 break-all">${email}</span>
                         </td>
                         <td class="px-8 py-5">
                             <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${statusClass}">

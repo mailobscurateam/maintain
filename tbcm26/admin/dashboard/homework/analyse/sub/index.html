@@ -82,9 +82,9 @@
                     <p class="text-xs font-bold text-slate-400 mt-2">Successful completions</p>
                 </div>
                 <div class="glass-card p-8 rounded-[2.5rem]">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cohort Average</p>
-                    <h2 id="metric-avg-score" class="text-4xl font-black text-orange-500">0%</h2>
-                    <p class="text-xs font-bold text-slate-400 mt-2">Performance benchmarking</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Completion Mark</p>
+                    <h2 id="metric-avg-score" class="text-4xl font-black text-orange-500">0</h2>
+                    <p class="text-xs font-bold text-slate-400 mt-2">Scale: (Completed / Registered) × 100</p>
                 </div>
             </div>
 
@@ -185,11 +185,13 @@
                 const total = registrationData.length;
                 const mastered = completionData.length;
                 const rate = total > 0 ? Math.round((mastered / total) * 100) : 0;
-                const avg = mastered > 0 ? Math.round(completionData.reduce((s, c) => s + (c.score || 0), 0) / mastered) : 0;
+                
+                // Calculated Mark: (Mastered Tasks / Total Registrations) * 100
+                const completionMark = total > 0 ? Math.round((mastered / total) * 100) : 0;
 
                 document.getElementById('metric-students').textContent = total;
                 document.getElementById('metric-rate').textContent = `${rate}%`;
-                document.getElementById('metric-avg-score').textContent = `${avg}%`;
+                document.getElementById('metric-avg-score').textContent = completionMark;
                 document.getElementById('row-count').textContent = `${total} Students`;
 
                 updateCharts(registrationData, completionData);

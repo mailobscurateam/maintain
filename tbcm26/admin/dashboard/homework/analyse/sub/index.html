@@ -77,21 +77,21 @@
                     <p class="text-xs font-bold text-indigo-600 mt-2">Active registrations</p>
                 </div>
                 <div class="glass-card p-8 rounded-[2.5rem]">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Mastery Rate</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cohort Mastery</p>
                     <h2 id="metric-rate" class="text-4xl font-black text-emerald-600">0%</h2>
-                    <p class="text-xs font-bold text-slate-400 mt-2">Successful completions</p>
+                    <p class="text-xs font-bold text-slate-400 mt-2">Avg. Subtasks Finished</p>
                 </div>
                 <div class="glass-card p-8 rounded-[2.5rem]">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Completion Mark</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Mark Summary</p>
                     <h2 id="metric-avg-score" class="text-4xl font-black text-orange-500">0</h2>
-                    <p class="text-xs font-bold text-slate-400 mt-2">Scale: (Completed / Registered) × 100</p>
+                    <p class="text-xs font-bold text-slate-400 mt-2">Scale: (User Subtasks / Total Subtasks) × 100</p>
                 </div>
             </div>
 
             <!-- Charts Row -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
-                    <h3 class="text-lg font-black text-slate-800 mb-6">Score Distribution</h3>
+                    <h3 class="text-lg font-black text-slate-800 mb-6">Subtask Progress Distribution</h3>
                     <div class="h-64">
                         <canvas id="scoreChart"></canvas>
                     </div>
@@ -115,8 +115,8 @@
                         <thead>
                             <tr class="bg-slate-50/50">
                                 <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student ID / Email</th>
-                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Progress Status</th>
-                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Final Score</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Subtasks Done</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Marks (%)</th>
                                 <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Joined On</th>
                             </tr>
                         </thead>
@@ -162,16 +162,24 @@
                 document.getElementById('empty-state').classList.add('hidden');
                 document.getElementById('dashboard-content').classList.remove('hidden');
 
-                // We perform two separate fetches to ensure data is retrieved even if the join fails
-                const [regsResponse, compsResponse] = await Promise.all([
+                // Step 1: Fetch total subtasks count for this speed task
+                const { count: totalSubtasksCount } = await client
+                    .from('speed_subtasks')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('task_id', taskId);
+
+                const finalTotalSubtasks = totalSubtasksCount || 1; // Prevent division by zero
+
+                // Step 2: Fetch registration data and user subtask completions
+                const [regsResponse, subCompsResponse] = await Promise.all([
                     client.from('speed_task_registrations').select('created_at, user_id').eq('task_id', taskId),
-                    client.from('speed_task_completions').select('*').eq('task_id', taskId)
+                    client.from('speed_subtasks_completion').select('user_id').eq('speed_task_id', taskId)
                 ]);
 
                 const registrationData = regsResponse.data || [];
-                const completionData = compsResponse.data || [];
+                const subCompletionData = subCompsResponse.data || [];
 
-                // To get emails, we fetch profiles based on the user_ids found in registrations
+                // Step 3: Fetch profiles for emails
                 const userIds = [...new Set(registrationData.map(r => r.user_id))];
                 let profilesMap = {};
 
@@ -188,29 +196,35 @@
                     }
                 }
 
-                // Process Metrics
-                const total = registrationData.length;
-                const mastered = completionData.length;
-                const rate = total > 0 ? Math.round((mastered / total) * 100) : 0;
-                
-                // Calculated Mark: (Completed Task / Total Registrations) * 100
-                const completionMark = total > 0 ? Math.round((mastered / total) * 100) : 0;
+                // Step 4: Map completions per user
+                const userMarks = registrationData.map(reg => {
+                    const userCompletedCount = subCompletionData.filter(sc => sc.user_id === reg.user_id).length;
+                    const mark = Math.round((userCompletedCount / finalTotalSubtasks) * 100);
+                    return {
+                        ...reg,
+                        completedCount: userCompletedCount,
+                        mark: mark
+                    };
+                });
 
-                document.getElementById('metric-students').textContent = total;
-                document.getElementById('metric-rate').textContent = `${rate}%`;
-                document.getElementById('metric-avg-score').textContent = completionMark;
-                document.getElementById('row-count').textContent = `${total} Students`;
+                // Step 5: Process Dashboard Metrics
+                const totalRegs = registrationData.length;
+                const avgMark = totalRegs > 0 ? Math.round(userMarks.reduce((acc, u) => acc + u.mark, 0) / totalRegs) : 0;
 
-                updateCharts(registrationData, completionData);
-                updateTable(registrationData, completionData, profilesMap);
+                document.getElementById('metric-students').textContent = totalRegs;
+                document.getElementById('metric-rate').textContent = `${avgMark}%`;
+                document.getElementById('metric-avg-score').textContent = avgMark;
+                document.getElementById('row-count').textContent = `${totalRegs} Students`;
+
+                updateCharts(registrationData, userMarks);
+                updateTable(userMarks, profilesMap, finalTotalSubtasks);
             }
 
-            function updateCharts(regs, comps) {
-                // Score Distribution Bar Chart
-                const dist = [0, 0, 0, 0, 0]; // 0-20, 21-40, 41-60, 61-80, 81-100
-                comps.forEach(c => {
-                    const s = c.score || 0;
-                    const idx = Math.min(Math.floor(s / 20.1), 4);
+            function updateCharts(regs, userMarks) {
+                // Progress Distribution Bar Chart
+                const dist = [0, 0, 0, 0, 0]; // ranges: 0-20, 21-40, etc.
+                userMarks.forEach(u => {
+                    const idx = Math.min(Math.floor(u.mark / 20.1), 4);
                     dist[idx]++;
                 });
 
@@ -219,7 +233,7 @@
                 scoreChart = new Chart(ctxScore, {
                     type: 'bar',
                     data: {
-                        labels: ['0-20', '21-40', '41-60', '61-80', '81-100'],
+                        labels: ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'],
                         datasets: [{
                             data: dist,
                             backgroundColor: '#6366f1',
@@ -266,38 +280,35 @@
                 });
             }
 
-            function updateTable(regs, comps, profilesMap) {
+            function updateTable(userMarks, profilesMap, totalSubtasks) {
                 const tbody = document.getElementById('student-list-body');
                 tbody.innerHTML = '';
 
-                regs.forEach(reg => {
-                    // Get email from manual map or fallback to ID
-                    const email = profilesMap[reg.user_id] || reg.user_id || 'Anonymous Student';
-                    const comp = comps.find(c => c.user_id === reg.user_id);
+                userMarks.forEach(user => {
+                    const email = profilesMap[user.user_id] || user.user_id || 'Anonymous Student';
                     
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0';
                     
-                    const statusClass = comp ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500';
-                    const statusText = comp ? 'Mastered' : 'In Progress';
+                    const markColor = user.mark >= 80 ? 'text-emerald-500' : (user.mark >= 40 ? 'text-indigo-500' : 'text-slate-400');
 
                     row.innerHTML = `
                         <td class="px-8 py-5">
                             <span class="text-sm font-bold text-slate-800 break-all">${email}</span>
                         </td>
                         <td class="px-8 py-5">
-                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${statusClass}">
-                                ${statusText}
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter bg-slate-100 text-slate-500">
+                                ${user.completedCount} / ${totalSubtasks}
                             </span>
                         </td>
                         <td class="px-8 py-5 text-center">
-                            <span class="text-sm font-black ${comp && comp.score >= 80 ? 'text-emerald-500' : 'text-slate-400'}">
-                                ${comp ? comp.score + '%' : '--'}
+                            <span class="text-sm font-black ${markColor}">
+                                ${user.mark}%
                             </span>
                         </td>
                         <td class="px-8 py-5 text-right">
                             <span class="text-xs font-medium text-slate-400">
-                                ${new Date(reg.created_at).toLocaleDateString()}
+                                ${new Date(user.created_at).toLocaleDateString()}
                             </span>
                         </td>
                     `;

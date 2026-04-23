@@ -121,19 +121,24 @@
                     <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Global Description</label>
                     <textarea id="task-desc" rows="2" class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all" placeholder="High-level objectives..."></textarea>
                 </div>
-                <!-- Updated: Added External Resource Field to Master Task -->
+                
+                <!-- Added: Global External Resource for Master Task -->
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Global External Resource (URL)</label>
-                    <input type="url" id="task-url-master" placeholder="https://main-resource-link.com" class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold">
+                    <div class="relative">
+                        <input type="url" id="task-url-master" placeholder="https://main-resource-link.com" class="w-full pl-12 pr-5 py-3.5 bg-indigo-50/30 border border-indigo-100 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-indigo-900">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-indigo-50 rounded-[2rem]">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 rounded-[2rem]">
                     <div>
-                        <label class="block text-[10px] font-black text-indigo-400 uppercase mb-2 ml-1">Start Window</label>
-                        <input type="datetime-local" id="task-start" class="w-full px-4 py-3 bg-white border border-indigo-100 rounded-xl outline-none font-bold text-slate-700">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Start Window</label>
+                        <input type="datetime-local" id="task-start" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none font-bold text-slate-700">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-indigo-400 uppercase mb-2 ml-1">End Window</label>
-                        <input type="datetime-local" id="task-end" class="w-full px-4 py-3 bg-white border border-indigo-100 rounded-xl outline-none font-bold text-slate-700">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">End Window</label>
+                        <input type="datetime-local" id="task-end" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none font-bold text-slate-700">
                     </div>
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t">
@@ -166,10 +171,6 @@
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Expected End</label>
                         <input type="datetime-local" id="subtask-end" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold">
                     </div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Resource URL</label>
-                    <input type="url" id="subtask-url" placeholder="https://..." class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none">
                 </div>
                 <div class="flex justify-end gap-3 pt-4">
                     <button type="button" onclick="closeSubTaskModal()" class="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition">Cancel</button>
@@ -309,7 +310,7 @@
                                     <p id="count-label-${task.id}" class="text-[10px] font-bold text-slate-400">${subtasks.length} total</p>
                                 </div>
                                 <button onclick="openSubTaskModal('${task.id}')" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-black rounded-xl hover:bg-slate-900 transition-all shadow-md">
-                                    + ADD NEW
+                                    + ADD UNIT
                                 </button>
                             </div>
 
@@ -331,7 +332,6 @@
                                             <span class="text-xs font-bold text-slate-600 truncate">${sub.title}</span>
                                         </div>
                                         <div class="flex items-center gap-2">
-                                            ${sub.external_resource ? `<a href="${sub.external_resource}" target="_blank" class="p-1.5 text-slate-300 hover:text-indigo-500"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>` : ''}
                                             <button onclick="deleteSubTask('${sub.id}')" class="p-1.5 text-slate-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                             </button>
@@ -377,7 +377,7 @@
                     title: document.getElementById('task-title').value,
                     subject: document.getElementById('task-subject').value,
                     description: document.getElementById('task-desc').value,
-                    external_resource: document.getElementById('task-url-master').value, // Correctly mapped to column
+                    external_resource: document.getElementById('task-url-master').value,
                     start_time: document.getElementById('task-start').value || null,
                     end_time: document.getElementById('task-end').value || null,
                     admin_id: currentUser.id
@@ -397,7 +397,6 @@
                     title: document.getElementById('subtask-title').value,
                     start_time: document.getElementById('subtask-start').value || null,
                     end_time: document.getElementById('subtask-end').value || null,
-                    external_resource: document.getElementById('subtask-url').value,
                     admin_id: currentUser.id
                 };
                 

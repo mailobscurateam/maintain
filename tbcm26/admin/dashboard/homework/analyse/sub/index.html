@@ -173,8 +173,8 @@
                 const subtaskIds = (subtasksData || []).map(s => s.id);
 
                 // Step 2: Fetch registration data and user subtask completions
-                // Logic updated: filtering speed_subtask_completion by subtask_id instead of speed_task_id
-                let subCompsQuery = client.from('speed_subtask_completion').select('user_id, subtask_id');
+                // Logic updated: filtering speed_subtask_completions by subtask_id instead of speed_task_id
+                let subCompsQuery = client.from('speed_subtask_completions').select('user_id, subtask_id');
                 
                 // If we have specific subtask IDs, filter by them to ensure we only get completions for this task
                 if (subtaskIds.length > 0) {

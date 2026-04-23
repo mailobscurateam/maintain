@@ -163,18 +163,30 @@
                 document.getElementById('dashboard-content').classList.remove('hidden');
 
                 // Step 1: Fetch total subtasks count for this speed task
-                const { count: totalSubtasksCount } = await client
+                // We also need the IDs of these subtasks to filter the completion table
+                const { data: subtasksData, count: totalSubtasksCount } = await client
                     .from('speed_subtasks')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact' })
                     .eq('task_id', taskId);
 
-                const finalTotalSubtasks = totalSubtasksCount || 1; // Prevent division by zero
+                const finalTotalSubtasks = totalSubtasksCount || 1;
+                const subtaskIds = (subtasksData || []).map(s => s.id);
 
                 // Step 2: Fetch registration data and user subtask completions
-                // TABLE UPDATED: speed_subtask_completion
+                // Logic updated: filtering speed_subtask_completion by subtask_id instead of speed_task_id
+                let subCompsQuery = client.from('speed_subtask_completion').select('user_id, subtask_id');
+                
+                // If we have specific subtask IDs, filter by them to ensure we only get completions for this task
+                if (subtaskIds.length > 0) {
+                    subCompsQuery = subCompsQuery.in('subtask_id', subtaskIds);
+                } else {
+                    // Fallback to empty if no subtasks exist
+                    subCompsQuery = subCompsQuery.eq('subtask_id', 'none');
+                }
+
                 const [regsResponse, subCompsResponse] = await Promise.all([
                     client.from('speed_task_registrations').select('created_at, user_id').eq('task_id', taskId),
-                    client.from('speed_subtask_completion').select('user_id').eq('speed_task_id', taskId)
+                    subCompsQuery
                 ]);
 
                 const registrationData = regsResponse.data || [];
@@ -223,7 +235,7 @@
 
             function updateCharts(regs, userMarks) {
                 // Progress Distribution Bar Chart
-                const dist = [0, 0, 0, 0, 0]; // ranges: 0-20, 21-40, etc.
+                const dist = [0, 0, 0, 0, 0];
                 userMarks.forEach(u => {
                     const idx = Math.min(Math.floor(u.mark / 20.1), 4);
                     dist[idx]++;
@@ -287,10 +299,8 @@
 
                 userMarks.forEach(user => {
                     const email = profilesMap[user.user_id] || user.user_id || 'Anonymous Student';
-                    
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0';
-                    
                     const markColor = user.mark >= 80 ? 'text-emerald-500' : (user.mark >= 40 ? 'text-indigo-500' : 'text-slate-400');
 
                     row.innerHTML = `

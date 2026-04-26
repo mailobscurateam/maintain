@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Task Admin - Single Task Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; opacity: 0; transition: opacity 0.3s ease; }
+        body.auth-checked { opacity: 1; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .select-custom {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+        }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-900 min-h-screen">
+
+    <div id="app-container" class="max-w-7xl mx-auto px-4 py-8 md:px-8">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <a href="index.html" class="bg-slate-900 p-2.5 rounded-xl text-white shadow-lg hover:bg-indigo-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                    </a>
+                    <h1 class="text-3xl font-black text-slate-900 tracking-tight">Task <span class="text-indigo-600">Deep-Dive</span></h1>
+                </div>
+                <p class="text-slate-500 font-medium ml-12">Analyzing student profiles and performance</p>
+            </div>
+
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <div class="relative flex-grow md:w-96">
+                    <select id="task-selector" class="select-custom w-full pl-5 pr-12 py-4 bg-white border border-slate-200 rounded-[1.5rem] shadow-sm text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all">
+                        <option value="" disabled selected>Loading tasks...</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="flex flex-col items-center justify-center py-24 bg-white rounded-[3rem] border border-dashed border-slate-300">
+            <div class="bg-indigo-50 p-6 rounded-full mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800">No Task Selected</h3>
+            <p class="text-slate-500">Pick a module above to view detailed student analytics</p>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboard-content" class="hidden space-y-8 animate-slide-up">
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-8 rounded-[2.5rem]">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Engaged Students</p>
+                    <h2 id="metric-students" class="text-4xl font-black text-slate-900">0</h2>
+                    <p class="text-xs font-bold text-indigo-600 mt-2">Active registrations</p>
+                </div>
+                <div class="glass-card p-8 rounded-[2.5rem]">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cohort Mastery</p>
+                    <h2 id="metric-rate" class="text-4xl font-black text-emerald-600">0%</h2>
+                    <p class="text-xs font-bold text-slate-400 mt-2">Avg. Subtasks Finished</p>
+                </div>
+                <div class="glass-card p-8 rounded-[2.5rem]">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Mark Summary</p>
+                    <h2 id="metric-avg-score" class="text-4xl font-black text-orange-500">0</h2>
+                    <p class="text-xs font-bold text-slate-400 mt-2">Scale: (User Subtasks / Total Subtasks) × 100</p>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-black text-slate-800 mb-6">Subtask Progress Distribution</h3>
+                    <div class="h-64">
+                        <canvas id="scoreChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-black text-slate-800 mb-6">Daily Activity</h3>
+                    <div class="h-64">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Table -->
+            <div class="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-8 border-b border-slate-100 flex justify-between items-center">
+                    <h3 class="text-xl font-black text-slate-800 tracking-tight">Student Performance Log</h3>
+                    <span id="row-count" class="text-xs font-black px-3 py-1 bg-slate-100 text-slate-500 rounded-full">0 Students</span>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50/50">
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student ID / Email</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Subtasks Done</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Marks (%)</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Joined On</th>
+                            </tr>
+                        </thead>
+                        <tbody id="student-list-body">
+                            <!-- Rows loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const SUPABASE_URL = 'https://tsaoxjzvhxiggntibpui.supabase.co'; 
+            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzYW94anp2aHhpZ2dudGlicHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDQ2OTAsImV4cCI6MjA5MTQyMDY5MH0.Q5Iu51O3NK4k2kcc_GoegnyAYIFIs2SUkQOV10qp2jI';
+            const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+            let scoreChart, timelineChart;
+
+            async function init() {
+                const { data: { session } } = await client.auth.getSession();
+                document.body.classList.add('auth-checked');
+                loadTasks();
+            }
+
+            async function loadTasks() {
+                const { data } = await client.from('ultimate_tasks').select('id, title, subject').order('title');
+                const selector = document.getElementById('task-selector');
+                selector.innerHTML = '<option value="" disabled selected>Select a task to analyze...</option>';
+                
+                (data || []).forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = `(${t.subject.toUpperCase()}) ${t.title}`;
+                    selector.appendChild(opt);
+                });
+
+                selector.addEventListener('change', (e) => analyzeTask(e.target.value));
+            }
+
+            async function analyzeTask(taskId) {
+                document.getElementById('empty-state').classList.add('hidden');
+                document.getElementById('dashboard-content').classList.remove('hidden');
+
+                // Step 1: Fetch total subtasks count for this speed task
+                // We also need the IDs of these subtasks to filter the completion table
+                const { data: subtasksData, count: totalSubtasksCount } = await client
+                    .from('ultimate_subtasks')
+                    .select('id', { count: 'exact' })
+                    .eq('task_id', taskId);
+
+                const finalTotalSubtasks = totalSubtasksCount || 1;
+                const subtaskIds = (subtasksData || []).map(s => s.id);
+
+                // Step 2: Fetch registration data and user subtask completions
+                // Logic updated: filtering ultimate_subtask_completions by subtask_id instead of ultimate_task_id
+                let subCompsQuery = client.from('ultimate_subtask_completions').select('user_id, subtask_id');
+                
+                // If we have specific subtask IDs, filter by them to ensure we only get completions for this task
+                if (subtaskIds.length > 0) {
+                    subCompsQuery = subCompsQuery.in('subtask_id', subtaskIds);
+                } else {
+                    // Fallback to empty if no subtasks exist
+                    subCompsQuery = subCompsQuery.eq('subtask_id', 'none');
+                }
+
+                const [regsResponse, subCompsResponse] = await Promise.all([
+                    client.from('ultimate_task_registrations').select('created_at, user_id').eq('task_id', taskId),
+                    subCompsQuery
+                ]);
+
+                const registrationData = regsResponse.data || [];
+                const subCompletionData = subCompsResponse.data || [];
+
+                // Step 3: Fetch profiles for emails
+                const userIds = [...new Set(registrationData.map(r => r.user_id))];
+                let profilesMap = {};
+
+                if (userIds.length > 0) {
+                    const { data: profilesData } = await client
+                        .from('profiles')
+                        .select('id, email')
+                        .in('id', userIds);
+                    
+                    if (profilesData) {
+                        profilesData.forEach(p => {
+                            profilesMap[p.id] = p.email;
+                        });
+                    }
+                }
+
+                // Step 4: Map completions per user
+                const userMarks = registrationData.map(reg => {
+                    const userCompletedCount = subCompletionData.filter(sc => sc.user_id === reg.user_id).length;
+                    const mark = Math.round((userCompletedCount / finalTotalSubtasks) * 100);
+                    return {
+                        ...reg,
+                        completedCount: userCompletedCount,
+                        mark: mark
+                    };
+                });
+
+                // Step 5: Process Dashboard Metrics
+                const totalRegs = registrationData.length;
+                const avgMark = totalRegs > 0 ? Math.round(userMarks.reduce((acc, u) => acc + u.mark, 0) / totalRegs) : 0;
+
+                document.getElementById('metric-students').textContent = totalRegs;
+                document.getElementById('metric-rate').textContent = `${avgMark}%`;
+                document.getElementById('metric-avg-score').textContent = avgMark;
+                document.getElementById('row-count').textContent = `${totalRegs} Students`;
+
+                updateCharts(registrationData, userMarks);
+                updateTable(userMarks, profilesMap, finalTotalSubtasks);
+            }
+
+            function updateCharts(regs, userMarks) {
+                // Progress Distribution Bar Chart
+                const dist = [0, 0, 0, 0, 0];
+                userMarks.forEach(u => {
+                    const idx = Math.min(Math.floor(u.mark / 20.1), 4);
+                    dist[idx]++;
+                });
+
+                const ctxScore = document.getElementById('scoreChart').getContext('2d');
+                if (scoreChart) scoreChart.destroy();
+                scoreChart = new Chart(ctxScore, {
+                    type: 'bar',
+                    data: {
+                        labels: ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'],
+                        datasets: [{
+                            data: dist,
+                            backgroundColor: '#6366f1',
+                            borderRadius: 8
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    }
+                });
+
+                // Timeline Line Chart
+                const dates = {};
+                regs.forEach(r => {
+                    const d = new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    dates[d] = (dates[d] || 0) + 1;
+                });
+                const labels = Object.keys(dates).slice(-7);
+
+                const ctxTime = document.getElementById('timelineChart').getContext('2d');
+                if (timelineChart) timelineChart.destroy();
+                timelineChart = new Chart(ctxTime, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: labels.map(l => dates[l]),
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    }
+                });
+            }
+
+            function updateTable(userMarks, profilesMap, totalSubtasks) {
+                const tbody = document.getElementById('student-list-body');
+                tbody.innerHTML = '';
+
+                userMarks.forEach(user => {
+                    const email = profilesMap[user.user_id] || user.user_id || 'Anonymous Student';
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0';
+                    const markColor = user.mark >= 80 ? 'text-emerald-500' : (user.mark >= 40 ? 'text-indigo-500' : 'text-slate-400');
+
+                    row.innerHTML = `
+                        <td class="px-8 py-5">
+                            <span class="text-sm font-bold text-slate-800 break-all">${email}</span>
+                        </td>
+                        <td class="px-8 py-5">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter bg-slate-100 text-slate-500">
+                                ${user.completedCount} / ${totalSubtasks}
+                            </span>
+                        </td>
+                        <td class="px-8 py-5 text-center">
+                            <span class="text-sm font-black ${markColor}">
+                                ${user.mark}%
+                            </span>
+                        </td>
+                        <td class="px-8 py-5 text-right">
+                            <span class="text-xs font-medium text-slate-400">
+                                ${new Date(user.created_at).toLocaleDateString()}
+                            </span>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>

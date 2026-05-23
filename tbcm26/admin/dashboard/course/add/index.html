@@ -4,31 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Course Manager | EduManager</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
         .glass {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
-        .modal-enter { animation: fadeIn 0.2s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-enter { 
+            animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+        }
+        @keyframes modalFadeIn { 
+            from { opacity: 0; transform: scale(0.95) translateY(10px); } 
+            to { opacity: 1; transform: scale(1) translateY(0); } 
+        }
         
-        /* Custom scrollbar for better UX */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        /* Custom scrollbar for premium feel */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .table-row-transition {
+            transition: all 0.3s ease;
+        }
+        .table-row-transition:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px -2px rgba(148, 163, 184, 0.12);
+        }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+<body class="bg-slate-50 min-h-screen text-slate-800 antialiased flex flex-col justify-between">
 
-    <!-- Auth Guard Overlay -->
-    <div id="authGuard" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
-        <div class="text-center">
-            <i class="fas fa-circle-notch fa-spin text-4xl text-indigo-600 mb-4"></i>
-            <p class="text-slate-600 font-medium">Verifying Credentials...</p>
+    <!-- Authentic Auth Verification Overlay -->
+    <div id="authGuard" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center modal-enter">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 text-2xl mb-5">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">EduManager Dashboard</h3>
+            <p class="text-slate-500 text-sm mb-6 leading-relaxed">
+                Verifying your administrative session credentials. Please wait...
+            </p>
+            <div class="flex flex-col items-center justify-center space-y-3">
+                <div class="flex items-center space-x-2 text-indigo-600 font-medium">
+                    <i class="fas fa-circle-notch fa-spin text-xl"></i>
+                    <span>Connecting to Supabase...</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -36,77 +68,87 @@
     <nav class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-40">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <!-- Logo Section -->
-            <div class="flex items-center space-x-2 cursor-pointer group" onclick="window.location.href='/tbcm26/admin/dashboard/'">
-                <div class="bg-indigo-600 p-2 rounded-lg text-white group-hover:bg-indigo-700 transition-colors">
+            <div class="flex items-center space-x-3 cursor-pointer group" onclick="location.reload();">
+                <div class="bg-indigo-600 p-2.5 rounded-xl text-white group-hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-100">
                     <i class="fas fa-graduation-cap"></i>
                 </div>
-                <span class="text-xl font-bold tracking-tight">EduManager</span>
+                <div class="flex flex-col">
+                    <span class="text-lg font-bold tracking-tight text-slate-900 leading-none">EduManager</span>
+                    <span class="text-[10px] text-slate-400 font-medium tracking-wider uppercase mt-1">Course Admin</span>
+                </div>
             </div>
 
-            <!-- Navigation Actions -->
+            <!-- Mode Badges & Actions -->
             <div class="flex items-center space-x-3">
-                <button onclick="window.location.href='/tbcm26/admin/dashboard/'" class="hidden sm:flex items-center px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                    <i class="fas fa-th-large mr-2"></i> Dashboard
+                <button onclick="location.reload();" class="hidden sm:flex items-center px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-xl transition-colors border border-slate-100">
+                    <i class="fas fa-sync-alt mr-2 text-xs"></i> Reload
                 </button>
                 
                 <div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
 
-                <button id="logoutBtn" class="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-100 flex items-center">
+                <button id="logoutBtn" class="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-red-100 flex items-center">
                     <i class="fas fa-sign-out-alt mr-2"></i> <span class="hidden xs:inline">Sign Out</span>
                 </button>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto py-10 px-4 sm:px-6">
-        <!-- Breadcrumbs for better context -->
-        <nav class="flex mb-4 text-sm text-slate-500" aria-label="Breadcrumb">
+    <!-- Main Content Grid -->
+    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 flex-grow w-full">
+        <!-- Breadcrumbs -->
+        <nav class="flex mb-4 text-xs text-slate-500" aria-label="Breadcrumb">
             <ol class="inline-flex items-center space-x-1 md:space-x-3">
                 <li class="inline-flex items-center">
-                    <a href="/tbcm26/admin/dashboard/" class="hover:text-indigo-600">Dashboard</a>
+                    <span class="hover:text-indigo-600 cursor-pointer">Dashboard</span>
                 </li>
                 <li>
                     <div class="flex items-center">
-                        <i class="fas fa-chevron-right text-[10px] mx-2"></i>
-                        <span class="font-medium text-slate-800">Course Manager</span>
+                        <i class="fas fa-chevron-right text-[8px] mx-2 text-slate-400"></i>
+                        <span class="font-medium text-slate-800">Course Catalog</span>
                     </div>
                 </li>
             </ol>
         </nav>
 
+        <!-- Header block with actions -->
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-slate-900">Course Catalog</h1>
-                <p class="text-slate-500 mt-1">Manage all your academic courses and enrollment links.</p>
+                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Course Catalog</h1>
+                <p class="text-slate-500 mt-1 text-sm">Create, edit, and publish academic programs, curriculum details, and entry portals.</p>
             </div>
             <div class="flex items-center gap-3">
-                <!-- Mobile Only Dashboard Link -->
-                <button onclick="window.location.href='/tbcm26/admin/dashboard/'" class="sm:hidden p-3 text-slate-600 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 transition-all">
-                    <i class="fas fa-th-large"></i>
-                </button>
-                <button onclick="toggleModal(true)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-indigo-200 transition-all flex-1 md:flex-none flex items-center justify-center">
-                    <i class="fas fa-plus mr-2"></i> Add New Course
+                <div class="relative w-full md:w-64">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 text-sm">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" id="searchInput" placeholder="Search course or instructor..." 
+                           class="w-full pl-9 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-400">
+                </div>
+                <button onclick="openCreateModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-5 rounded-xl shadow-lg shadow-indigo-100 transition-all flex items-center justify-center whitespace-nowrap">
+                    <i class="fas fa-plus mr-2"></i> Add Course
                 </button>
             </div>
         </div>
 
-        <!-- Course List Table -->
-        <div class="glass rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <!-- Course List Table Card -->
+        <div class="glass rounded-2xl border border-slate-200 shadow-sm overflow-hidden bg-white/80">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-50 border-b border-slate-200">
+                    <thead class="bg-slate-50/75 border-b border-slate-200">
                         <tr>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Course Name</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Course Info</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Instructor</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Created At</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider hidden sm:table-cell">Created Date</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="courseTableBody" class="divide-y divide-slate-100 bg-white/50">
-                        <!-- Courses populated by JS -->
+                    <tbody id="courseTableBody" class="divide-y divide-slate-100 bg-white/30">
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-slate-400">
-                                <i class="fas fa-circle-notch fa-spin mr-2"></i> Loading courses...
+                            <td colspan="4" class="px-6 py-16 text-center text-slate-400">
+                                <div class="flex flex-col items-center justify-center space-y-2">
+                                    <i class="fas fa-circle-notch fa-spin text-2xl text-indigo-500"></i>
+                                    <span class="font-medium text-sm">Retrieving your educational programs...</span>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -115,64 +157,67 @@
         </div>
     </main>
 
-    <!-- Create Course Modal -->
+    <!-- Create & Edit Course Modal -->
     <div id="courseModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="glass w-full max-w-xl rounded-3xl shadow-2xl modal-enter overflow-hidden">
-            <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white">
+        <div class="glass w-full max-w-xl rounded-3xl shadow-2xl modal-enter overflow-hidden bg-white">
+            <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <div>
-                    <h2 class="text-xl font-bold text-slate-900">New Course Setup</h2>
-                    <p class="text-sm text-slate-500">Enter the details for the new academic offering.</p>
+                    <h2 id="modalTitle" class="text-xl font-extrabold text-slate-900">New Course Setup</h2>
+                    <p id="modalDescription" class="text-xs text-slate-500 mt-1">Provide credentials, details, and access assets for enrollment.</p>
                 </div>
-                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-50 rounded-full">
-                    <i class="fas fa-times text-xl"></i>
+                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-slate-600 transition-colors p-2.5 hover:bg-slate-100 rounded-full">
+                    <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
             
-            <form id="courseForm" class="p-8 space-y-5 bg-white/30">
+            <form id="courseForm" class="p-8 space-y-5 bg-white">
+                <!-- Hidden inputs for mapping editable assets -->
+                <input type="hidden" name="id" id="courseIdInput">
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Course Name</label>
-                        <input type="text" name="name" required
-                            class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Course Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" id="courseNameInput" required
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-400 text-sm text-slate-800 font-medium"
                             placeholder="e.g. Full Stack Web Development">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Instructor Name</label>
-                        <input type="text" name="instructor" required
-                            class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Instructor Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="instructor" id="courseInstructorInput" required
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-400 text-sm text-slate-800"
                             placeholder="e.g. Dr. Jane Smith">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Enrollment Link</label>
-                        <input type="url" name="enroll_link"
-                            class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Enrollment Link</label>
+                        <input type="url" name="enroll_link" id="courseEnrollLinkInput"
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-400 text-sm text-slate-800"
                             placeholder="https://enroll.link">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">Course Image URL</label>
-                    <input type="url" name="image_url"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                        placeholder="https://images.unsplash.com/...">
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Course Image URL</label>
+                    <input type="url" name="image_url" id="courseImageUrlInput"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-400 text-sm text-slate-800"
+                        placeholder="https://images.unsplash.com/photo-...">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">Description</label>
-                    <textarea name="description" rows="3"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
-                        placeholder="What is this course about?"></textarea>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Course Description</label>
+                    <textarea name="description" id="courseDescriptionInput" rows="3"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-400 text-sm text-slate-800 resize-none"
+                        placeholder="What are the curriculum outcomes and syllabus subjects?"></textarea>
                 </div>
 
-                <div class="flex gap-4 pt-4">
+                <div class="flex gap-4 pt-4 border-t border-slate-100">
                     <button type="button" onclick="toggleModal(false)" 
-                        class="flex-1 px-6 py-3 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all">
+                        class="flex-1 px-6 py-3 border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-all">
                         Cancel
                     </button>
                     <button type="submit" id="saveBtn"
-                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all">
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 px-6 rounded-xl shadow-lg shadow-indigo-100 transition-all flex items-center justify-center">
                         Save Course
                     </button>
                 </div>
@@ -180,19 +225,131 @@
         </div>
     </div>
 
+    <!-- Dialog Confirmation Modal -->
+    <div id="confirmationDialog" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-55 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center modal-enter">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-50 text-red-500 text-lg mb-4">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+            <h4 id="dialogTitle" class="text-base font-bold text-slate-900 mb-1">Delete Course</h4>
+            <p id="dialogMsg" class="text-xs text-slate-500 mb-6 leading-relaxed">This item will be removed permanently. Are you sure you want to proceed?</p>
+            <div class="flex space-x-3">
+                <button id="dialogCancelBtn" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all">Cancel</button>
+                <button id="dialogConfirmBtn" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-md shadow-red-100 transition-all">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Toast notification alerts -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-55 flex flex-col gap-2"></div>
+
+    <!-- Global Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400">
+        <p>&copy; 2026 EduManager System. All rights reserved.</p>
+    </footer>
+
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
+        // Supabase Endpoint Credentials
         const SUPABASE_URL = 'https://tsaoxjzvhxiggntibpui.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzYW94anp2aHhpZ2dudGlicHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDQ2OTAsImV4cCI6MjA5MTQyMDY5MH0.Q5Iu51O3NK4k2kcc_GoegnyAYIFIs2SUkQOV10qp2jI';
         
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let supabase;
+        try {
+            supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch(e) {
+            console.error("Supabase SDK load failed.", e);
+        }
+
+        let globalCourseList = [];
 
         const courseTableBody = document.getElementById('courseTableBody');
         const courseForm = document.getElementById('courseForm');
         const authGuard = document.getElementById('authGuard');
         const logoutBtn = document.getElementById('logoutBtn');
         const saveBtn = document.getElementById('saveBtn');
+        const searchInput = document.getElementById('searchInput');
+
+        // Toast Alert Manager
+        function triggerToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `flex items-center space-x-3 p-4 rounded-xl shadow-lg border text-sm font-medium transition-all duration-300 transform translate-y-5 opacity-0 ${
+                type === 'success' 
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                : type === 'error' 
+                ? 'bg-rose-50 text-rose-800 border-rose-200' 
+                : 'bg-indigo-50 text-indigo-800 border-indigo-200'
+            }`;
+            
+            let icon = 'fa-check-circle';
+            if (type === 'error') icon = 'fa-exclamation-circle';
+            else if (type === 'info') icon = 'fa-info-circle';
+
+            toast.innerHTML = `
+                <i class="fas ${icon} text-lg flex-shrink-0"></i>
+                <div class="flex-grow">${message}</div>
+                <button class="text-slate-400 hover:text-slate-600 focus:outline-none ml-2">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-5', 'opacity-0');
+            }, 10);
+
+            toast.querySelector('button').addEventListener('click', () => {
+                dismissToast(toast);
+            });
+
+            setTimeout(() => {
+                dismissToast(toast);
+            }, 5000);
+        }
+
+        function dismissToast(toast) {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }
+
+        // Custom Confirm Dialogue Box
+        function openConfirmDialog(title, message, onConfirm) {
+            const dialog = document.getElementById('confirmationDialog');
+            const titleEl = document.getElementById('dialogTitle');
+            const msgEl = document.getElementById('dialogMsg');
+            const cancelBtn = document.getElementById('dialogCancelBtn');
+            const confirmBtn = document.getElementById('dialogConfirmBtn');
+
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+            dialog.classList.remove('hidden');
+
+            const handleCancel = () => {
+                dialog.classList.add('hidden');
+                cleanup();
+            };
+
+            const handleConfirm = () => {
+                dialog.classList.add('hidden');
+                onConfirm();
+                cleanup();
+            };
+
+            function cleanup() {
+                cancelBtn.removeEventListener('click', handleCancel);
+                confirmBtn.removeEventListener('click', handleConfirm);
+            }
+
+            cancelBtn.addEventListener('click', handleCancel);
+            confirmBtn.addEventListener('click', handleConfirm);
+        }
 
         // Modal Control
         window.toggleModal = (show) => {
@@ -204,24 +361,65 @@
                 modal.classList.add('hidden');
                 document.body.style.overflow = 'auto';
                 courseForm.reset();
+                document.getElementById('courseIdInput').value = '';
             }
+        };
+
+        // Open modal in CREATE mode
+        window.openCreateModal = () => {
+            document.getElementById('modalTitle').textContent = "New Course Setup";
+            document.getElementById('modalDescription').textContent = "Provide credentials, details, and access assets for enrollment.";
+            document.getElementById('saveBtn').textContent = "Save Course";
+            toggleModal(true);
+        };
+
+        // Open modal in EDIT mode
+        window.openEditModal = (id) => {
+            const targetCourse = globalCourseList.find(c => c.id === id);
+            if (!targetCourse) {
+                triggerToast("Could not retrieve course details.", "error");
+                return;
+            }
+
+            // Populate inputs
+            document.getElementById('courseIdInput').value = targetCourse.id;
+            document.getElementById('courseNameInput').value = targetCourse.name || '';
+            document.getElementById('courseInstructorInput').value = targetCourse.instructor || '';
+            document.getElementById('courseEnrollLinkInput').value = targetCourse.enroll_link || '';
+            document.getElementById('courseImageUrlInput').value = targetCourse.image_url || '';
+            document.getElementById('courseDescriptionInput').value = targetCourse.description || '';
+
+            // Update Header and Submit UI states
+            document.getElementById('modalTitle').textContent = "Edit Course Details";
+            document.getElementById('modalDescription').textContent = "Alter existing academic parameters, info blocks, and reference paths.";
+            document.getElementById('saveBtn').textContent = "Update Course";
+
+            toggleModal(true);
         };
 
         async function checkAuth() {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                if (!supabase) {
+                    throw new Error("Supabase is not configured.");
+                }
+
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) throw error;
+
                 if (!session) {
                     window.location.href = 'login.html';
-                    return null;
+                    return;
                 }
+                
                 authGuard.classList.add('hidden');
-                return session.user;
+                loadCourses();
             } catch (e) {
-                console.error("Auth check failed", e);
+                console.error("Authentication check failed:", e);
                 window.location.href = 'login.html';
             }
         }
 
+        // Render elements directly from Supabase
         async function loadCourses() {
             try {
                 const { data, error } = await supabase
@@ -230,105 +428,197 @@
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
+                globalCourseList = data || [];
+                renderCourseGrid(globalCourseList);
 
-                if (!data || data.length === 0) {
-                    courseTableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-12 text-center text-slate-400 font-medium">No courses added yet. Start by creating your first one!</td></tr>';
-                    return;
-                }
+            } catch (err) {
+                console.error(err);
+                courseTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="px-6 py-12 text-center text-rose-500 font-medium bg-rose-50/20">
+                            <i class="fas fa-exclamation-circle mr-2 text-lg"></i> Error communicating with server. 
+                            <button onclick="location.reload();" class="ml-2 underline text-rose-700 font-bold hover:text-rose-900">Try again</button>
+                        </td>
+                    </tr>`;
+            }
+        }
 
-                courseTableBody.innerHTML = data.map(course => `
-                    <tr class="hover:bg-indigo-50/30 transition-colors group">
+        // Render lists to Table Grid
+        function renderCourseGrid(list) {
+            if (!list || list.length === 0) {
+                courseTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="px-6 py-16 text-center text-slate-400 font-medium">
+                            <div class="flex flex-col items-center justify-center space-y-2">
+                                <i class="fas fa-folder-open text-3xl text-slate-300"></i>
+                                <span class="text-slate-500 font-semibold text-sm">No courses matching that criteria</span>
+                                <span class="text-xs text-slate-400">Add a course above or clear your filters to begin.</span>
+                            </div>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            courseTableBody.innerHTML = list.map(course => {
+                const enrollmentBadge = course.enroll_link 
+                    ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-check-circle mr-1 text-[10px]"></i> Open</span>`
+                    : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200"><i class="fas fa-lock mr-1 text-[10px]"></i> Locked</span>`;
+
+                return `
+                    <tr class="hover:bg-slate-50/50 table-row-transition duration-200">
                         <td class="px-6 py-4">
                             <div class="flex items-center">
-                                <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center mr-3 overflow-hidden border border-slate-100 flex-shrink-0">
+                                <div class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center mr-4 overflow-hidden flex-shrink-0 relative shadow-sm">
                                     ${course.image_url ? 
-                                        `<img src="${course.image_url}" class="w-full h-full object-cover" onerror="this.innerHTML='<i class=\'fas fa-book text-indigo-400\'></i>'; this.src='';">` : 
-                                        '<i class="fas fa-book text-indigo-400"></i>'}
+                                        `<img src="${course.image_url}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='https://placehold.co/150x150/e2e8f0/4f46e5?text=Course';">` : 
+                                        '<i class="fas fa-book text-indigo-400 text-lg"></i>'}
                                 </div>
-                                <div>
-                                    <div class="font-semibold text-slate-900">${course.name}</div>
-                                    <div class="text-xs text-slate-400 md:hidden">${course.instructor || 'Staff'}</div>
+                                <div class="flex flex-col max-w-sm">
+                                    <div class="font-bold text-slate-900 text-sm leading-snug hover:text-indigo-600 transition-colors">${course.name}</div>
+                                    <div class="text-[11px] text-slate-400 md:hidden mt-0.5 font-medium flex items-center gap-2">
+                                        <span>By ${course.instructor || 'Staff'}</span>
+                                        <span>•</span>
+                                        ${enrollmentBadge}
+                                    </div>
+                                    <p class="text-xs text-slate-500 line-clamp-1 mt-1 hidden sm:block font-normal">${course.description || 'No summary syllabus description was provided.'}</p>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-slate-600 hidden md:table-cell">${course.instructor || 'N/A'}</td>
-                        <td class="px-6 py-4 text-slate-500 text-sm hidden sm:table-cell">
-                            ${new Date(course.created_at).toLocaleDateString()}
+                        <td class="px-6 py-4 text-slate-600 text-sm font-medium hidden md:table-cell">${course.instructor || 'N/A'}</td>
+                        <td class="px-6 py-4 text-slate-500 text-xs hidden sm:table-cell font-mono">
+                            ${new Date(course.created_at).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})}
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <div class="flex items-center justify-end space-x-2">
+                            <div class="flex items-center justify-end space-x-1.5">
                                 ${course.enroll_link ? `
-                                    <a href="${course.enroll_link}" target="_blank" class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors" title="View Enrollment">
-                                        <i class="fas fa-external-link-alt"></i>
+                                    <a href="${course.enroll_link}" target="_blank" class="p-2 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all" title="View Enrollment Page">
+                                        <i class="fas fa-external-link-alt text-sm"></i>
                                     </a>
                                 ` : ''}
-                                <button class="text-slate-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-lg" onclick="deleteCourse('${course.id}')" title="Delete Course">
-                                    <i class="fas fa-trash-alt"></i>
+                                <button class="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all p-2 rounded-xl" onclick="openEditModal('${course.id}')" title="Edit Course Elements">
+                                    <i class="fas fa-edit text-sm"></i>
+                                </button>
+                                <button class="text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all p-2 rounded-xl" onclick="triggerDeleteCourse('${course.id}', '${course.name.replace(/'/g, "\\'")}')" title="Delete Course Document">
+                                    <i class="fas fa-trash-alt text-sm"></i>
                                 </button>
                             </div>
                         </td>
                     </tr>
-                `).join('');
-
-            } catch (err) {
-                console.error(err);
-                courseTableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-red-500 font-medium"><i class="fas fa-exclamation-circle mr-2"></i> Error loading data. Please try again.</td></tr>';
-            }
+                `;
+            }).join('');
         }
 
-        window.deleteCourse = async (id) => {
-            if (!confirm('Are you sure? This will remove the course entry from the catalog.')) return;
-            
-            try {
-                const { error } = await supabase.from('courses').delete().eq('id', id);
-                if (error) throw error;
-                loadCourses();
-            } catch (err) {
-                alert('Error deleting course: ' + err.message);
+        // Filter and search operation
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            if(!query) {
+                renderCourseGrid(globalCourseList);
+                return;
             }
-        };
 
+            const filtered = globalCourseList.filter(course => {
+                const nameMatch = (course.name || '').toLowerCase().includes(query);
+                const instMatch = (course.instructor || '').toLowerCase().includes(query);
+                const descMatch = (course.description || '').toLowerCase().includes(query);
+                return nameMatch || instMatch || descMatch;
+            });
+
+            renderCourseGrid(filtered);
+        });
+
+        // Handles Form Submissions for creating OR updating courses strictly via Supabase
         courseForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            const courseId = document.getElementById('courseIdInput').value;
+            const isEditMode = !!courseId;
+
             saveBtn.disabled = true;
             const originalText = saveBtn.innerHTML;
-            saveBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Saving...';
+            saveBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> ${isEditMode ? 'Updating...' : 'Creating...'}`;
 
             const formData = new FormData(courseForm);
             const payload = {
-                name: formData.get('name'),
-                instructor: formData.get('instructor'),
-                image_url: formData.get('image_url'),
-                enroll_link: formData.get('enroll_link'),
-                description: formData.get('description')
+                name: formData.get('name').trim(),
+                instructor: formData.get('instructor').trim(),
+                image_url: formData.get('image_url').trim(),
+                enroll_link: formData.get('enroll_link').trim(),
+                description: formData.get('description').trim()
             };
 
             try {
-                const { error } = await supabase.from('courses').insert([payload]);
-                if (error) throw error;
-                
+                if (isEditMode) {
+                    const { error } = await supabase
+                        .from('courses')
+                        .update(payload)
+                        .eq('id', courseId);
+                    
+                    if (error) throw error;
+                    triggerToast("Course parameters updated successfully!", "success");
+                } else {
+                    const { error } = await supabase
+                        .from('courses')
+                        .insert([payload]);
+                    
+                    if (error) throw error;
+                    triggerToast("New course successfully registered!", "success");
+                }
+
                 toggleModal(false);
                 loadCourses();
             } catch (err) {
-                alert('Error: ' + err.message);
+                console.error("Submit failed:", err);
+                triggerToast('Operation error: ' + err.message, "error");
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = originalText;
             }
         });
 
-        logoutBtn.addEventListener('click', async () => {
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                console.error("Logout error", error);
-            }
-            window.location.href = 'login.html';
+        // Delete Action Dispatcher
+        window.triggerDeleteCourse = (id, courseName) => {
+            openConfirmDialog(
+                "Delete Catalog Course?", 
+                `Are you sure you want to delete "${courseName}"? This action will permanently remove all associated curriculum assets.`,
+                async () => {
+                    try {
+                        const { error } = await supabase
+                            .from('courses')
+                            .delete()
+                            .eq('id', id);
+
+                        if (error) throw error;
+                        triggerToast("Course deleted from database successfully.", "success");
+                        loadCourses();
+                    } catch (err) {
+                        console.error("Delete process failed:", err);
+                        triggerToast('Error removing course: ' + err.message, "error");
+                    }
+                }
+            );
+        };
+
+        // System Exit / Sign Out
+        logoutBtn.addEventListener('click', () => {
+            openConfirmDialog(
+                "Sign Out Dashboard?",
+                "Are you sure you want to end your active administration session?",
+                async () => {
+                    try {
+                        const { error } = await supabase.auth.signOut();
+                        if (error) throw error;
+                        window.location.href = 'login.html';
+                    } catch (e) {
+                        console.error("Auth SignOut error:", e);
+                        window.location.href = 'login.html';
+                    }
+                }
+            );
         });
 
-        // Initialize
-        window.addEventListener('DOMContentLoaded', async () => {
-            const user = await checkAuth();
-            if (user) loadCourses();
+        // Initialize App Engine
+        window.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
         });
     </script>
 </body>

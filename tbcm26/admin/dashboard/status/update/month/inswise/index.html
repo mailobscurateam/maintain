@@ -250,7 +250,7 @@
         let masterData = [];
         const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         
-        // Metadata mapping for instructors corresponding to course names (used if db schema instructor matches aren't present)
+        // Fallback instructors for static local entries if db course relationship contains blank data
         const INSTRUCTOR_FALLBACKS = {
             "Full Stack Development": "Dr. Sarah Jenkins",
             "Advanced Web Applications": "Prof. Alex Rivera",
@@ -311,10 +311,10 @@
             try {
                 if (!sb) return;
 
-                // Query database
+                // Query database requesting 'instructor' directly from courses table join
                 const { data: approvals, error: approvalsError } = await sb
                     .from('monthly_approvals')
-                    .select(`id, user_id, course_id, month_number, status, created_at, courses ( name, instructor_name )`)
+                    .select(`id, user_id, course_id, month_number, status, created_at, courses ( name, instructor )`)
                     .order('created_at', { ascending: false });
 
                 if (approvalsError) throw approvalsError;
@@ -330,7 +330,8 @@
 
                 masterData = approvals.map(item => {
                     const courseObj = item.courses || {};
-                    const dbInstructor = courseObj.instructor_name || courseObj.instructor;
+                    // Fetch direct instructor column value loaded from relation
+                    const dbInstructor = courseObj.instructor;
                     const instructor = dbInstructor || INSTRUCTOR_FALLBACKS[courseObj.name] || DEFAULT_INSTRUCTOR;
 
                     return {

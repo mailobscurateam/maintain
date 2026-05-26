@@ -67,6 +67,7 @@
     </style>
 </head>
 <body class="min-h-screen pb-20">
+
     <!-- Top Navigation -->
     <nav class="sticky top-0 z-50 glass-nav">
         <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -90,7 +91,7 @@
                     <i data-lucide="refresh-cw" class="w-5 h-5" id="refresh-icon"></i>
                 </button>
                 <div class="h-6 w-[1px] bg-slate-200 mx-1"></div>
-                <button class="px-4 py-2 text-sm font-bold text-slate-700 hover:text-red-600 transition-all">
+                <button onclick="confirmSignOut()" class="px-4 py-2 text-sm font-bold text-slate-700 hover:text-red-600 transition-all">
                     Sign Out
                 </button>
             </div>
@@ -213,15 +214,43 @@
         </div>
     </div>
 
+    <!-- Custom Modal Confirm Dialog -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden z-[110] p-4">
+        <div class="bg-white max-w-md w-full rounded-2xl border border-slate-200 p-6 shadow-2xl">
+            <div class="flex items-start gap-4 mb-4">
+                <div id="modal-icon-container" class="p-3 rounded-full bg-red-50 text-red-600">
+                    <i data-lucide="help-circle" class="w-6 h-6" id="modal-icon"></i>
+                </div>
+                <div>
+                    <h3 id="modal-title" class="text-lg font-bold text-slate-900">Confirm Action</h3>
+                    <p id="modal-message" class="text-slate-500 text-sm mt-1">Are you sure you want to proceed?</p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeModal()" class="px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+                <button id="modal-confirm-btn" class="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-lg shadow-red-500/15 transition-all">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[120] flex flex-col gap-3 max-w-sm w-full"></div>
+
     <script>
         const SUPABASE_URL = 'https://tsaoxjzvhxiggntibpui.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzYW94anp2aHhpZ2dudGlicHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDQ2OTAsImV4cCI6MjA5MTQyMDY5MH0.Q5Iu51O3NK4k2kcc_GoegnyAYIFIs2SUkQOV10qp2jI';
-        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let sb;
+        try {
+            sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+            console.error("Supabase client instantiation error:", e);
+        }
 
         let masterData = [];
         const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         
-        // Dynamic fallback list to map instructors to courses if instructor column is missing
+        // Metadata mapping for instructors corresponding to course names (used if db schema instructor matches aren't present)
         const INSTRUCTOR_FALLBACKS = {
             "Full Stack Development": "Dr. Sarah Jenkins",
             "Advanced Web Applications": "Prof. Alex Rivera",
@@ -232,36 +261,57 @@
         };
         const DEFAULT_INSTRUCTOR = "Lead Instructor";
 
-        // Local Storage Cache Key
+        // Cache Keys
         const CACHE_KEY_INSTRUCTOR = 'nexus_selected_instructor';
 
-        async function init() {
-            const { data: { session } } = await sb.auth.getSession();
-            if (!session) return window.location.href = 'login.html';
-            
-            await fetchData();
+        // Custom Modal Controller Variables
+        let activeConfirmCallback = null;
 
-            // Setup input/select event listeners
-            document.getElementById('search-input').addEventListener('input', applyFilters);
-            document.getElementById('instructor-filter').addEventListener('change', (e) => {
-                const val = e.target.value;
-                // Store selected instructor in Cache
-                if (val) {
-                    localStorage.setItem(CACHE_KEY_INSTRUCTOR, val);
-                } else {
-                    localStorage.removeItem(CACHE_KEY_INSTRUCTOR);
+        async function init() {
+            try {
+                if (!sb) {
+                    showToast("System setup is incomplete. Supabase is unreachable.", "error");
+                    return;
                 }
-                applyFilters();
-            });
-            document.getElementById('course-filter').addEventListener('change', applyFilters);
+                const { data: { session }, error } = await sb.auth.getSession();
+                if (error) throw error;
+                
+                if (!session) {
+                    showToast("No active session. Redirecting to login...", "error");
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 1500);
+                    return;
+                }
+                
+                await fetchData();
+
+                // Setup inputs and filter triggers
+                document.getElementById('search-input').addEventListener('input', applyFilters);
+                document.getElementById('instructor-filter').addEventListener('change', (e) => {
+                    const val = e.target.value;
+                    if (val) {
+                        localStorage.setItem(CACHE_KEY_INSTRUCTOR, val);
+                    } else {
+                        localStorage.removeItem(CACHE_KEY_INSTRUCTOR);
+                    }
+                    applyFilters();
+                });
+                document.getElementById('course-filter').addEventListener('change', applyFilters);
+            } catch (err) {
+                console.error("Initialization Failed:", err);
+                showToast("Authentication Check Failed.", "error");
+            }
         }
 
         async function fetchData() {
             const refreshIcon = document.getElementById('refresh-icon');
-            refreshIcon.classList.add('animate-spin');
+            if (refreshIcon) refreshIcon.classList.add('animate-spin');
 
             try {
-                // Fetch approvals requesting instructor column if it exists, along with course name
+                if (!sb) return;
+
+                // Query database
                 const { data: approvals, error: approvalsError } = await sb
                     .from('monthly_approvals')
                     .select(`id, user_id, course_id, month_number, status, created_at, courses ( name, instructor_name )`)
@@ -273,44 +323,44 @@
                     .from('profiles')
                     .select('id, email');
 
-                if (profilesError) throw profilesError;
-
                 const profileMap = {};
-                profiles.forEach(p => profileMap[p.id] = p.email);
+                if (!profilesError && profiles) {
+                    profiles.forEach(p => profileMap[p.id] = p.email);
+                }
 
                 masterData = approvals.map(item => {
                     const courseObj = item.courses || {};
                     const dbInstructor = courseObj.instructor_name || courseObj.instructor;
-                    
-                    // Fallback generator to guarantee working filters even if database schemas vary
                     const instructor = dbInstructor || INSTRUCTOR_FALLBACKS[courseObj.name] || DEFAULT_INSTRUCTOR;
 
                     return {
                         ...item,
-                        user_email: profileMap[item.user_id] || 'N/A',
+                        user_email: profileMap[item.user_id] || item.user_email || 'student@nexus.edu',
                         instructor: instructor
                     };
                 });
 
                 updateStats(masterData);
                 populateDropdowns();
-                
-                // Load cached instructor preference if exists
-                const cachedInstructor = localStorage.getItem(CACHE_KEY_INSTRUCTOR);
-                if (cachedInstructor) {
-                    const instructorDropdown = document.getElementById('instructor-filter');
-                    // Check if cached instructor actually exists in the current dropdown choices
-                    const optionExists = Array.from(instructorDropdown.options).some(opt => opt.value === cachedInstructor);
-                    if (optionExists) {
-                        instructorDropdown.value = cachedInstructor;
-                    }
-                }
-
+                restoreCachedInstructor();
                 applyFilters();
+
             } catch (err) {
-                console.error(err);
+                console.error("Database query failure:", err);
+                showToast("Could not load approvals data from database.", "error");
             } finally {
-                refreshIcon.classList.remove('animate-spin');
+                if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+            }
+        }
+
+        function restoreCachedInstructor() {
+            const cachedInstructor = localStorage.getItem(CACHE_KEY_INSTRUCTOR);
+            if (cachedInstructor) {
+                const instructorDropdown = document.getElementById('instructor-filter');
+                const optionExists = Array.from(instructorDropdown.options).some(opt => opt.value === cachedInstructor);
+                if (optionExists) {
+                    instructorDropdown.value = cachedInstructor;
+                }
             }
         }
 
@@ -318,23 +368,18 @@
             const instructorSelect = document.getElementById('instructor-filter');
             const courseSelect = document.getElementById('course-filter');
 
-            // Save currently selected values to restore them
             const prevInstructor = instructorSelect.value;
             const prevCourse = courseSelect.value;
 
-            // Extract unique instructors and courses
             const uniqueInstructors = [...new Set(masterData.map(item => item.instructor).filter(Boolean))].sort();
             const uniqueCourses = [...new Set(masterData.map(item => item.courses?.name).filter(Boolean))].sort();
 
-            // Populate Instructors
             instructorSelect.innerHTML = '<option value="">All Instructors</option>' + 
                 uniqueInstructors.map(inst => `<option value="${inst}">${inst}</option>`).join('');
 
-            // Populate Courses
             courseSelect.innerHTML = '<option value="">All Courses</option>' + 
                 uniqueCourses.map(course => `<option value="${course}">${course}</option>`).join('');
 
-            // Restore selection state
             if (uniqueInstructors.includes(prevInstructor)) instructorSelect.value = prevInstructor;
             if (uniqueCourses.includes(prevCourse)) courseSelect.value = prevCourse;
         }
@@ -355,7 +400,6 @@
                 return searchMatch && instructorMatch && courseMatch;
             });
 
-            // Toggle "Clear Filters" button visibility and the count indicator
             const isFilteringActive = searchTerm !== '' || selectedInstructor !== '' || selectedCourse !== '';
             document.getElementById('clear-filters-btn').classList.toggle('hidden', !isFilteringActive);
             
@@ -376,10 +420,9 @@
             document.getElementById('instructor-filter').value = '';
             document.getElementById('course-filter').value = '';
             
-            // Clean the instructor cache when they explicitly reset filters
             localStorage.removeItem(CACHE_KEY_INSTRUCTOR);
-            
             applyFilters();
+            showToast("Filters successfully reset", "success");
         }
 
         function updateStats(data) {
@@ -405,27 +448,111 @@
                     .eq('id', id);
 
                 if (error) throw error;
+                showToast(`Request successfully marked as ${newStatus}`, "success");
                 await fetchData();
             } catch (err) {
-                alert(err.message);
+                showToast(err.message, "error");
             } finally {
                 setLoading(false);
             }
         }
 
-        async function deleteRequest(id) {
-            // Replaced default browser confirm with a standard custom-looking overlay or check.
-            if (!confirm("Remove this request entirely?")) return;
-            setLoading(true);
-            try {
-                const { error } = await sb.from('monthly_approvals').delete().eq('id', id);
-                if (error) throw error;
-                await fetchData();
-            } catch (err) {
-                alert(err.message);
-            } finally {
-                setLoading(false);
-            }
+        function deleteRequest(id) {
+            openConfirmModal(
+                "Delete Activation Request",
+                "Are you absolutely sure you want to remove this student activation request entirely from database records? This cannot be undone.",
+                "trash-2",
+                "bg-red-50 text-red-600",
+                async () => {
+                    closeModal();
+                    setLoading(true);
+                    try {
+                        const { error } = await sb.from('monthly_approvals').delete().eq('id', id);
+                        if (error) throw error;
+                        showToast("Activation request deleted successfully", "success");
+                        await fetchData();
+                    } catch (err) {
+                        showToast(err.message, "error");
+                    } finally {
+                        setLoading(false);
+                    }
+                }
+            );
+        }
+
+        function confirmSignOut() {
+            openConfirmModal(
+                "Sign Out",
+                "Would you like to log out of the Nexus Monthly Approvals administration console?",
+                "log-out",
+                "bg-slate-100 text-slate-700",
+                async () => {
+                    closeModal();
+                    if (sb) {
+                        await sb.auth.signOut();
+                    }
+                    window.location.href = 'index.html';
+                }
+            );
+        }
+
+        /* CUSTOM MODAL & PROMPTS FUNCTIONS */
+        function openConfirmModal(title, message, iconName, iconClass, onConfirm) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            
+            const iconContainer = document.getElementById('modal-icon-container');
+            iconContainer.className = `p-3 rounded-full ${iconClass}`;
+            
+            const iconEl = document.getElementById('modal-icon');
+            iconEl.setAttribute('data-lucide', iconName);
+            
+            activeConfirmCallback = onConfirm;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+            
+            lucide.createIcons();
+            
+            // Assign handler to Confirm button
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            confirmBtn.onclick = activeConfirmCallback;
+        }
+
+        function closeModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            activeConfirmCallback = null;
+        }
+
+        function showToast(message, type = "success") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const isSuccess = type === "success";
+            const icon = isSuccess ? "check-circle" : "alert-circle";
+            const borderBg = isSuccess ? "bg-white border-l-4 border-emerald-500 shadow-emerald-500/10" : "bg-white border-l-4 border-red-500 shadow-red-500/10";
+            const iconColor = isSuccess ? "text-emerald-500" : "text-red-500";
+
+            toast.className = `p-4 rounded-xl shadow-lg border border-slate-100 flex items-start gap-3 transition-all duration-300 transform translate-y-4 opacity-0 ${borderBg}`;
+            toast.innerHTML = `
+                <div class="${iconColor} mt-0.5"><i data-lucide="${icon}" class="w-5 h-5"></i></div>
+                <div class="flex-1 text-sm font-semibold text-slate-800 pr-4">${message}</div>
+                <button class="text-slate-400 hover:text-slate-700 transition-colors" onclick="this.parentElement.remove()"><i data-lucide="x" class="w-4 h-4"></i></button>
+            `;
+
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            // Trigger animations
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 10);
+
+            // Auto dismiss after 4 seconds
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 4000);
         }
 
         function renderTable(data) {

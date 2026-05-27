@@ -570,7 +570,7 @@
         function populateInstructorsFilter(courses) {
             const instructors = new Set();
             courses.forEach(course => {
-                const inst = course.instructor || course.instructor_name || course.teacher;
+                const inst = course.instructor;
                 if (inst && inst.trim()) {
                     instructors.add(inst.trim());
                 }
@@ -590,7 +590,7 @@
             const selectedInstructor = instructorFilter.value;
             const filteredCourses = selectedInstructor 
                 ? allCourses.filter(c => {
-                    const inst = c.instructor || c.instructor_name || c.teacher || '';
+                    const inst = c.instructor || '';
                     return inst.trim() === selectedInstructor;
                   })
                 : allCourses;
@@ -610,7 +610,7 @@
                 const option = document.createElement('option');
                 option.value = course.id;
                 
-                const inst = course.instructor || course.instructor_name || course.teacher;
+                const inst = course.instructor;
                 option.textContent = inst ? `${course.name} (${inst})` : course.name;
                 
                 courseSelect.appendChild(option);
@@ -628,8 +628,8 @@
 
         async function fetchCourses() {
             try {
-                // Select all columns to handle flexible schema properties (instructor, teacher, instructor_name)
-                const { data, error } = await supabase.from('courses').select('*').order('name', { ascending: true });
+                // Select only required columns from courses table including explicitly 'instructor'
+                const { data, error } = await supabase.from('courses').select('id, name, instructor').order('name', { ascending: true });
                 if (error) throw error;
                 if (data && data.length > 0) {
                     allCourses = data;

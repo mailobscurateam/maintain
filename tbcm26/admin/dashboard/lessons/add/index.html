@@ -323,6 +323,7 @@
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
         const CACHE_COURSE_KEY = 'last_selected_course_id';
+        const CACHE_INSTRUCTOR_KEY = 'last_selected_instructor';
 
         let allLessons = [];
         let allCourses = [];
@@ -633,6 +634,13 @@
                 if (data && data.length > 0) {
                     allCourses = data;
                     populateInstructorsFilter(allCourses);
+                    
+                    // Retrieve and apply last selected instructor cache
+                    const cachedInstructor = localStorage.getItem(CACHE_INSTRUCTOR_KEY);
+                    if (cachedInstructor && Array.from(instructorFilter.options).some(opt => opt.value === cachedInstructor)) {
+                        instructorFilter.value = cachedInstructor;
+                    }
+                    
                     populateCoursesDropdown();
                 } else {
                     courseSelect.innerHTML = '<option value="">No courses created yet</option>';
@@ -653,7 +661,8 @@
             renderLessons(allLessons);
         });
 
-        instructorFilter.addEventListener('change', () => {
+        instructorFilter.addEventListener('change', (e) => {
+            localStorage.setItem(CACHE_INSTRUCTOR_KEY, e.target.value);
             populateCoursesDropdown();
         });
 

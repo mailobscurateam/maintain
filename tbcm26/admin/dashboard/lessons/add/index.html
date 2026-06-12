@@ -448,27 +448,47 @@
             }
         });
 
-        // REUSABLE UI LOGIC
-        function updateCategoryFilter(lessons) {
+        // DYNAMIC CATEGORY DROPDOWN LOGIC
+        function updateCategoryFilterDropdown() {
+            let targetLessons = allLessons;
+            
+            // Only aggregate categories belonging to currently selected month/year (if filter is active)
+            if (isFilteringByFormDate) {
+                const targetMonth = parseInt(monthSelect.value);
+                const targetYear = parseInt(yearSelect.value);
+                
+                targetLessons = allLessons.filter(l => 
+                    parseInt(l.month) === targetMonth && 
+                    parseInt(l.year) === targetYear
+                );
+            }
+
             const categories = new Set();
-            lessons.forEach(l => { if (l.categories) l.categories.split(',').forEach(cat => categories.add(cat.trim())); });
+            targetLessons.forEach(l => { 
+                if (l.categories) {
+                    l.categories.split(',').forEach(cat => categories.add(cat.trim()));
+                } 
+            });
+
             const currentVal = categoryFilter.value;
             categoryFilter.innerHTML = '<option value="">All Categories</option>';
             Array.from(categories).sort().forEach(cat => {
                 const option = document.createElement('option');
-                option.value = cat; option.textContent = cat;
+                option.value = cat; 
+                option.textContent = cat;
                 categoryFilter.appendChild(option);
             });
-            if (Array.from(categories).includes(currentVal)) categoryFilter.value = currentVal;
+
+            // Retain previous category selection if it is still available in the list
+            if (Array.from(categories).includes(currentVal)) {
+                categoryFilter.value = currentVal;
+            } else {
+                categoryFilter.value = "";
+            }
         }
 
         function renderLessons(lessons) {
             let filtered = lessons;
-
-            // Apply Category Search Filter
-            if (categoryFilter.value) {
-                filtered = filtered.filter(l => l.categories?.toLowerCase().includes(categoryFilter.value.toLowerCase()));
-            }
 
             // Apply Form Date Filter (Month/Year) if active
             if (isFilteringByFormDate) {
@@ -487,13 +507,20 @@
                 clearDateFilter.classList.add('hidden');
             }
 
+            // Apply Category Search Filter securely using exact match elements instead of loose substrings
+            if (categoryFilter.value) {
+                filtered = filtered.filter(l => 
+                    l.categories && l.categories.split(',').map(c => c.trim().toLowerCase()).includes(categoryFilter.value.toLowerCase())
+                );
+            }
+
             lessonCount.textContent = `${filtered.length} Lessons`;
             
             if (filtered.length === 0) {
                 lessonsList.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-full text-slate-400 border-2 border-dashed border-slate-100 rounded-xl p-8">
                         <i class="fas fa-calendar-times text-4xl mb-3 opacity-20"></i>
-                        <p class="text-sm">No lessons found for this month/year.</p>
+                        <p class="text-sm">No lessons found.</p>
                         ${isFilteringByFormDate ? '<button onclick="window.disableDateFilter()" class="mt-4 text-xs font-bold text-indigo-600 hover:underline">Show All Lessons</button>' : ''}
                     </div>`;
                 return;
@@ -550,7 +577,7 @@
                 const { data, error } = await supabase.from('lessons').select('*').eq('course_id', courseId).order('month', { ascending: true }).order('created_at', { ascending: false });
                 if (error) throw error;
                 allLessons = data;
-                updateCategoryFilter(allLessons);
+                updateCategoryFilterDropdown();
                 renderLessons(allLessons);
             } catch (err) {
                 lessonsList.innerHTML = `<p class="text-red-500 text-center p-4">Error loading lessons</p>`;
@@ -653,11 +680,13 @@
         // Automatic Filtering Observers
         monthSelect.addEventListener('change', () => {
             isFilteringByFormDate = true;
+            updateCategoryFilterDropdown();
             renderLessons(allLessons);
         });
 
         yearSelect.addEventListener('change', () => {
             isFilteringByFormDate = true;
+            updateCategoryFilterDropdown();
             renderLessons(allLessons);
         });
 
@@ -678,6 +707,7 @@
         // Global disable filter function for "Clear" button
         window.disableDateFilter = function() {
             isFilteringByFormDate = false;
+            updateCategoryFilterDropdown();
             renderLessons(allLessons);
         };
 

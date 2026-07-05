@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Prime - Admin Portal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fff5f5',
+                            100: '#fed7d7',
+                            500: '#ef4444', // Cyber Red
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            950: '#450a0a',
+                        },
+                        prime: {
+                            yellow: '#facc15', // Premium Gold Yellow
+                            dark: '#09090b', // Slate Zinc Black
+                            card: '#18181b', // Zinc dark gray
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .theme-transition {
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
+        /* Custom scrollbar matching original design */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50 min-h-screen font-sans theme-transition pb-16">
+
+    <!-- AUTHENTICATION CONTAINER (Guards Dashboard Access) -->
+    <div id="authSection" class="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-zinc-50 dark:bg-zinc-950 transition-colors">
+        <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
+            <div class="inline-flex bg-gradient-to-br from-brand-600 to-prime-yellow text-zinc-950 p-4 rounded-2xl shadow-xl shadow-brand-500/10 mb-4">
+                <i class="fa-solid fa-user-gear text-3xl"></i>
+            </div>
+            <h2 class="text-3.5xl font-black tracking-tight text-zinc-950 dark:text-white">
+                NEXUS<span class="text-brand-500">PRIME</span>
+            </h2>
+            <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400 font-semibold tracking-wide uppercase">
+                Systems Administration Hub
+            </p>
+        </div>
+
+        <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+            <div class="bg-white dark:bg-zinc-900 py-8 px-6 shadow-2xl rounded-3xl border border-zinc-200 dark:border-zinc-800/80 transition-colors">
+                <!-- Sign In Header -->
+                <div class="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 mb-6 pb-3">
+                    <h3 class="text-md font-bold tracking-tight text-zinc-800 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-lock-open text-brand-500"></i>
+                        Authorized Administrator Login
+                    </h3>
+                    <button onclick="toggleAuthTab('config')" id="tab-config" class="text-zinc-400 dark:text-zinc-500 hover:text-brand-500 transition-all" title="Supabase Settings">
+                        <i class="fa-solid fa-gears text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Supabase Credential Quick Config Panel -->
+                <div id="panel-config" class="hidden mb-6 p-4 bg-brand-50/50 dark:bg-zinc-800/40 rounded-2xl border border-brand-100 dark:border-zinc-800">
+                    <div class="flex items-center gap-2 mb-2 text-xs font-bold text-brand-600 dark:text-brand-500 uppercase tracking-wider">
+                        <i class="fa-solid fa-database"></i> Database Credentials
+                    </div>
+                    <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mb-3 leading-relaxed">
+                        Verify or update your database parameters below. Changes are remembered on this browser.
+                    </p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase">Supabase URL</label>
+                            <input type="text" id="config-url" placeholder="https://your-project-id.supabase.co" class="mt-1 block w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase">Anon Key / Public Key</label>
+                            <input type="password" id="config-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="mt-1 block w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                        <button onclick="saveSupabaseConfig()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 rounded-lg text-xs transition-colors">
+                            Apply Parameters
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Forms Area -->
+                <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-5">
+                    <div>
+                        <label for="email" class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">Administrator Email</label>
+                        <div class="mt-1.5 relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-400">
+                                <i class="fa-solid fa-envelope text-xs"></i>
+                            </span>
+                            <input id="email" type="email" required autocomplete="email" class="block w-full pl-9 pr-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-850 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-sm transition-all" placeholder="admin@school.com">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="password" class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">Password</label>
+                        <div class="mt-1.5 relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-400">
+                                <i class="fa-solid fa-lock text-xs"></i>
+                            </span>
+                            <input id="password" type="password" required autocomplete="current-password" class="block w-full pl-9 pr-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-850 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-sm transition-all" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <div>
+                        <button type="submit" id="btnAuthSubmit" class="w-full flex justify-center py-3 px-4 rounded-xl shadow-lg shadow-brand-500/10 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 focus:outline-none transition-colors cursor-pointer">
+                            Launch Administration Console
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN PORTAL CONTAINER (Initially Hidden) -->
+    <div id="mainPortalSection" class="hidden">
+        <!-- Header Section -->
+        <header class="border-b border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/90 backdrop-blur sticky top-0 z-50 transition-colors">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-gradient-to-r from-brand-600 to-prime-yellow text-zinc-950 p-2.5 rounded-xl shadow-lg">
+                        <i class="fa-solid fa-user-gear text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg sm:text-xl font-black tracking-tight">NEXUS<span class="text-brand-500">PRIME</span> <span class="text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-2 py-0.5 rounded ml-1">ADMIN</span></h1>
+                        <p class="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Systems Controls &amp; Class Directory</p>
+                    </div>
+                </div>
+                
+                <!-- Navigation & Admin Control Elements -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <div class="hidden md:flex flex-col text-right mr-1">
+                        <span id="userDisplayEmail" class="text-xs font-bold text-zinc-800 dark:text-zinc-200">admin@nexusprime.com</span>
+                        <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">Super Administrator</span>
+                    </div>
+
+                    <!-- Synchronize Actions -->
+                    <button onclick="fetchLiveAllTables()" class="p-2 rounded-lg text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors" title="Reload Database Content">
+                        <i class="fa-solid fa-arrows-rotate text-md"></i>
+                    </button>
+                    <button id="themeToggle" class="p-2 rounded-lg text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors" title="Toggle Theme">
+                        <i id="themeIcon" class="fa-solid fa-moon text-lg"></i>
+                    </button>
+                    <button onclick="handleLogout()" class="ml-1 p-2 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors" title="Exit Panel">
+                        <i class="fa-solid fa-right-from-bracket text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Wrapper -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+            
+            <!-- Administration Metrics Overview -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+                    <div>
+                        <span class="text-xs text-zinc-500 dark:text-zinc-400 font-bold block uppercase tracking-wider">Total Class Records</span>
+                        <span id="statClassCount" class="text-2xl font-black text-brand-500">0</span>
+                    </div>
+                    <div class="p-3 bg-red-50 dark:bg-zinc-800/60 text-brand-600 dark:text-brand-500 rounded-xl">
+                        <i class="fa-solid fa-calendar-days text-xl"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+                    <div>
+                        <span class="text-xs text-zinc-500 dark:text-zinc-400 font-bold block uppercase tracking-wider">Course Modules</span>
+                        <span id="statCourseCount" class="text-2xl font-black text-prime-yellow">0</span>
+                    </div>
+                    <div class="p-3 bg-yellow-50 dark:bg-zinc-800/60 text-prime-yellow rounded-xl">
+                        <i class="fa-solid fa-graduation-cap text-xl"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+                    <div>
+                        <span class="text-xs text-zinc-500 dark:text-zinc-400 font-bold block uppercase tracking-wider">Approved Students</span>
+                        <span id="statApprovalCount" class="text-2xl font-black text-emerald-500">0</span>
+                    </div>
+                    <div class="p-3 bg-emerald-50 dark:bg-zinc-800/60 text-emerald-500 rounded-xl">
+                        <i class="fa-solid fa-id-card-clip text-xl"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+                    <div>
+                        <span class="text-xs text-zinc-500 dark:text-zinc-400 font-bold block uppercase tracking-wider">System State</span>
+                        <span id="systemStateBadge" class="text-sm font-black text-emerald-500 block">Live (DB)</span>
+                    </div>
+                    <div class="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl">
+                        <i class="fa-solid fa-server text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Controls -->
+            <div class="border-b border-zinc-200 dark:border-zinc-800 mb-8 flex flex-wrap gap-2">
+                <button onclick="switchTab('classes')" id="tabBtn-classes" class="tab-control-btn border-b-2 border-brand-500 px-5 py-3 text-sm font-extrabold text-brand-600 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-video text-brand-500"></i>
+                    Class Schedules
+                </button>
+                <button onclick="switchTab('courses')" id="tabBtn-courses" class="tab-control-btn border-b-2 border-transparent px-5 py-3 text-sm font-semibold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    Course Mappings
+                </button>
+                <button onclick="switchTab('approvals')" id="tabBtn-approvals" class="tab-control-btn border-b-2 border-transparent px-5 py-3 text-sm font-semibold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 flex items-center gap-2">
+                    <i class="fa-solid fa-user-check"></i>
+                    Student Monthly Approvals
+                </button>
+            </div>
+
+            <!-- Fallback Mock Warning alert -->
+            <div id="mockWarningBanner" class="hidden mb-6 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-start gap-3">
+                    <i class="fa-solid fa-circle-exclamation text-xl mt-0.5 flex-shrink-0"></i>
+                    <div>
+                        <p class="font-extrabold text-sm">Offline Sandbox Simulator Mode</p>
+                        <p class="text-xs text-amber-700 dark:text-amber-500">Database failed or Credentials not configured yet. The console is running with full CRUD simulation locally. Live class portal users won't see edits until you link your Supabase database parameters.</p>
+                    </div>
+                </div>
+                <button onclick="toggleAuthTab('config')" class="bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/40 text-amber-900 dark:text-amber-300 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap">
+                    Link Supabase
+                </button>
+            </div>
+
+            <!-- Loading Spinner State -->
+            <div id="statusIndicator" class="hidden text-center py-20">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-brand-500 border-t-transparent mb-4"></div>
+                <p class="text-sm text-zinc-600 dark:text-zinc-400 font-semibold">Synchronizing Live Database Records...</p>
+            </div>
+
+            <!-- 1. SCHEDULES TAB -->
+            <div id="tabContent-classes" class="tab-pane space-y-6">
+                <!-- Actions Bar -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-2xl shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <button onclick="openClassModal()" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-brand-500/10 flex items-center gap-2 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-plus"></i> Add New Class Session
+                        </button>
+                    </div>
+                    <div class="relative w-full sm:w-80">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-400">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </span>
+                        <input id="searchClassesInput" oninput="filterClassesTable()" type="text" placeholder="Search class schedules..." class="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <!-- Classes Datagrid / Table -->
+                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-zinc-100/80 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-300 text-[11px] font-bold uppercase border-b border-zinc-200 dark:border-zinc-800">
+                                    <th class="px-6 py-4">Title / Name</th>
+                                    <th class="px-6 py-4">Session &amp; Month</th>
+                                    <th class="px-6 py-4">Subject</th>
+                                    <th class="px-6 py-4">Course Type</th>
+                                    <th class="px-6 py-4">Date</th>
+                                    <th class="px-6 py-4">Time Windows (Zoom/QBT/PPP)</th>
+                                    <th class="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="classesTableBody" class="divide-y divide-zinc-200 dark:divide-zinc-800/60 text-sm">
+                                <!-- Loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. COURSES TAB -->
+            <div id="tabContent-courses" class="tab-pane hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Left: Create/Edit Course Form -->
+                    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm self-start">
+                        <h3 id="courseFormTitle" class="text-md font-bold mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-folder-plus text-brand-500"></i>
+                            Add New Course Map
+                        </h3>
+                        <form id="courseForm" onsubmit="handleCourseFormSubmit(event)" class="space-y-4">
+                            <input type="hidden" id="course-editing-id" value="">
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">Course ID (Optionally Numbered/UUID)</label>
+                                <input id="course-id" type="text" placeholder="e.g. 1, 2, 3 or manual code" class="mt-1.5 block w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">Course Code / Key Name</label>
+                                <input id="course-code" type="text" required placeholder="e.g. PHYS-101, CHEM-EVAL" class="mt-1.5 block w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">Course Display Name</label>
+                                <input id="course-name" type="text" required placeholder="e.g. Advanced Physics Mechanics" class="mt-1.5 block w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">Track Type Group</label>
+                                <input id="course-type" type="text" required placeholder="e.g. Physics Core, Evaluation" class="mt-1.5 block w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            </div>
+                            <div class="pt-3 flex gap-2">
+                                <button type="submit" class="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl shadow transition-colors cursor-pointer">
+                                    Save Course Map
+                                </button>
+                                <button type="button" onclick="resetCourseForm()" class="px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+                                    Clear
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Right: Courses List Grid -->
+                    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm lg:col-span-2">
+                        <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                            <h3 class="text-sm font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-brand-500"></i>
+                                Active Mapped Course Tracks
+                            </h3>
+                            <span class="text-xs bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded font-semibold text-zinc-600 dark:text-zinc-450">Synchronized</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-zinc-50 dark:bg-zinc-800/40 text-zinc-500 text-[10px] font-bold uppercase border-b border-zinc-200 dark:border-zinc-800">
+                                        <th class="px-6 py-3">ID / Reference</th>
+                                        <th class="px-6 py-3">Code</th>
+                                        <th class="px-6 py-3">Mapped Course Name</th>
+                                        <th class="px-6 py-3">Category Group</th>
+                                        <th class="px-6 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="coursesTableBody" class="divide-y divide-zinc-200 dark:divide-zinc-800/60 text-sm">
+                                    <!-- Loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. APPROVALS TAB -->
+            <div id="tabContent-approvals" class="tab-pane hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Left: Create/Edit Approval Form -->
+                    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm self-start">
+                        <h3 id="approvalFormTitle" class="text-md font-bold mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-user-plus text-brand-500"></i>
+                            Authorize Access Month
+                        </h3>
+                        <form id="approvalForm" onsubmit="handleApprovalFormSubmit(event)" class="space-y-4">
+                            <input type="hidden" id="approval-editing-id" value="">
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">Student Email Address</label>
+                                <input id="approval-email" type="email" required placeholder="student@example.com" class="mt-1.5 block w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">Approved Month Number (e.g., 7 for July)</label>
+                                <input id="approval-month" type="text" required placeholder="e.g. 7" class="mt-1.5 block w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                                <p class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">This authorizes student display actions on portal dates inside this month number.</p>
+                            </div>
+                            <div class="pt-3 flex gap-2">
+                                <button type="submit" class="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl shadow transition-colors cursor-pointer">
+                                    Grant Approval
+                                </button>
+                                <button type="button" onclick="resetApprovalForm()" class="px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+                                    Clear
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Right: Approvals Table -->
+                    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm lg:col-span-2">
+                        <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                            <h3 class="text-sm font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-users text-brand-500"></i>
+                                Registered Student Access Registrations
+                            </h3>
+                            <div class="relative w-48 sm:w-64">
+                                <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-zinc-400">
+                                    <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                                </span>
+                                <input id="searchApprovalsInput" oninput="filterApprovalsTable()" type="text" placeholder="Search approvals..." class="w-full pl-8 pr-2.5 py-1 text-xs rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto font-sans">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-zinc-50 dark:bg-zinc-800/40 text-zinc-500 text-[10px] font-bold uppercase border-b border-zinc-200 dark:border-zinc-800">
+                                        <th class="px-6 py-3">Student Identity (Email)</th>
+                                        <th class="px-6 py-3">Approved Month (Number/String)</th>
+                                        <th class="px-6 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="approvalsTableBody" class="divide-y divide-zinc-200 dark:divide-zinc-800/60 text-sm">
+                                    <!-- Loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLASS SCHEDULING MODAL (Add & Edit) -->
+            <div id="classModal" class="fixed inset-0 z-50 overflow-y-auto hidden bg-zinc-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl transition-all relative">
+                    <!-- Modal Header -->
+                    <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/50">
+                        <h3 id="classModalTitle" class="text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-plus text-brand-500"></i>
+                            Schedule Class Session
+                        </h3>
+                        <button onclick="closeClassModal()" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-250 transition-colors">
+                            <i class="fa-solid fa-circle-xmark text-xl"></i>
+                        </button>
+                    </div>
+
+                    <!-- Modal Body Form -->
+                    <form id="classDetailsForm" onsubmit="handleClassFormSubmit(event)" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                        <input type="hidden" id="class-editing-index" value="">
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">Session Display Title / Name</label>
+                                <input id="f-name" type="text" required placeholder="Advanced Quantum Physics Lecture" class="mt-1.5 block w-full px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">Session Number (Key)</label>
+                                <input id="f-sessionNo" type="text" placeholder="e.g. S-101" class="mt-1.5 block w-full px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">Subject Theme</label>
+                                <input id="f-subject" type="text" required placeholder="e.g. Physics, Chemistry" class="mt-1.5 block w-full px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">Course Type Track (e.g. PHYS-101)</label>
+                                <select id="f-type" required class="mt-1.5 block w-full px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                                    <!-- Populated dynamically via course records -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">Class Duration</label>
+                                <input id="f-duration" type="text" required placeholder="e.g. 1 hr 30 mins" class="mt-1.5 block w-full px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">Scheduled Date</label>
+                                <input id="f-date" type="date" required class="mt-1.5 block w-full px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">Access Month Number</label>
+                                <input id="f-month" type="text" required placeholder="e.g. 7" class="mt-1.5 block w-full px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Time Config Grid -->
+                        <div class="border-t border-zinc-100 dark:border-zinc-800/80 pt-4 mt-2">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-brand-500 mb-3 flex items-center gap-1.5">
+                                <i class="fa-solid fa-clock"></i> Access Window Parameters (Format: HH:MM:SS)
+                            </h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <!-- Zoom window -->
+                                <div class="p-3.5 bg-zinc-50 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-850">
+                                    <span class="block text-[11px] font-bold uppercase mb-2 text-zinc-700 dark:text-zinc-300">1. Zoom Time Window</span>
+                                    <div class="space-y-2">
+                                        <input id="f-st-zoom" type="text" placeholder="Start (e.g., 08:00:00)" class="block w-full px-2.5 py-1 text-xs rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                                        <input id="f-et-zoom" type="text" placeholder="End (e.g., 14:30:00)" class="block w-full px-2.5 py-1 text-xs rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                                    </div>
+                                </div>
+                                <!-- QBT window -->
+                                <div class="p-3.5 bg-zinc-50 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-850">
+                                    <span class="block text-[11px] font-bold uppercase mb-2 text-zinc-700 dark:text-zinc-300">2. QBT Form Window</span>
+                                    <div class="space-y-2">
+                                        <input id="f-st-qbt" type="text" placeholder="Start (e.g., 08:15:00)" class="block w-full px-2.5 py-1 text-xs rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                                        <input id="f-et-qbt" type="text" placeholder="End (e.g., 08:45:00)" class="block w-full px-2.5 py-1 text-xs rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                                    </div>
+                                </div>
+                                <!-- PPP window -->
+                                <div class="p-3.5 bg-zinc-50 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-850">
+                                    <span class="block text-[11px] font-bold uppercase mb-2 text-zinc-700 dark:text-zinc-300">3. PPP Form Window</span>
+                                    <div class="space-y-2">
+                                        <input id="f-st-ppp" type="text" placeholder="Start (e.g., 09:00:00)" class="block w-full px-2.5 py-1 text-xs rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                                        <input id="f-et-ppp" type="text" placeholder="End (e.g., 14:45:00)" class="block w-full px-2.5 py-1 text-xs rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Active redirection links -->
+                        <div class="border-t border-zinc-100 dark:border-zinc-800/80 pt-4 mt-2 space-y-3">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-brand-500 flex items-center gap-1.5">
+                                <i class="fa-solid fa-link"></i> Dynamic Redirect Links
+                            </h4>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">Zoom Call Url</label>
+                                <input id="f-zoom-link" type="text" placeholder="https://zoom.us/j/session-id" class="mt-1 block w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">GForm QBT Url</label>
+                                <input id="f-qbt-link" type="text" placeholder="https://docs.google.com/forms/qbt-id" class="mt-1 block w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">Gform PPP Url</label>
+                                <input id="f-ppp-link" type="text" placeholder="https://docs.google.com/forms/ppp-id" class="mt-1 block w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                            </div>
+                        </div>
+
+                        <!-- Actions footer -->
+                        <div class="pt-4 flex items-center justify-end gap-3 border-t border-zinc-200 dark:border-zinc-800">
+                            <button type="button" onclick="closeClassModal()" class="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-semibold rounded-xl hover:bg-zinc-200 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl shadow-lg transition-colors cursor-pointer">
+                                Save Session Schedule
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Custom Notification Toast Box -->
+            <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-300 max-w-sm w-full bg-zinc-900 text-white dark:bg-zinc-800 rounded-xl p-4 shadow-2xl flex items-start space-x-3 border border-zinc-700 dark:border-zinc-600">
+                <div class="bg-brand-600 text-white p-1.5 rounded-lg">
+                    <i class="fa-solid fa-info-circle text-md"></i>
+                </div>
+                <div class="flex-1">
+                    <p id="toastTitle" class="text-sm font-semibold"></p>
+                    <p id="toastMessage" class="text-xs text-zinc-300 mt-0.5"></p>
+                </div>
+                <button onclick="hideToast()" class="text-zinc-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // SUPABASE DEFAULT CREDENTIALS 
+        let SUPABASE_URL = "https://tsaoxjzvhxiggntibpui.supabase.co";
+        let SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzYW94anp2aHhpZ2dudGlicHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDQ2OTAsImV4cCI6MjA5MTQyMDY5MH0.Q5Iu51O3NK4k2kcc_GoegnyAYIFIs2SUkQOV10qp2jI";
+
+        // Application State
+        let supabaseClient = null;
+        let isMockMode = false;
+
+        // Repositories
+        let classesList = [];
+        let coursesList = [];
+        let approvalsList = [];
+
+        window.onload = function() {
+            initTheme();
+            loadSavedSupabaseConfig();
+            initSupabaseClient();
+            checkCurrentUserSession();
+        };
+
+        /* ==================== THEME MANAGEMENT ==================== */
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                updateThemeIcon(true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                updateThemeIcon(false);
+            }
+
+            document.getElementById('themeToggle').addEventListener('click', () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.theme = isDark ? 'dark' : 'light';
+                updateThemeIcon(isDark);
+            });
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = document.getElementById('themeIcon');
+            if (icon) {
+                if (isDark) {
+                    icon.className = 'fa-solid fa-sun text-lg text-prime-yellow';
+                } else {
+                    icon.className = 'fa-solid fa-moon text-lg text-zinc-500';
+                }
+            }
+        }
+
+        /* ==================== TAB NAVIGATION MANAGEMENT ==================== */
+        function switchTab(tabId) {
+            // Hide all tab content panes
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+            
+            // Show requested pane
+            document.getElementById(`tabContent-${tabId}`).classList.remove('hidden');
+
+            // Reset tab button states
+            document.querySelectorAll('.tab-control-btn').forEach(btn => {
+                btn.className = "tab-control-btn border-b-2 border-transparent px-5 py-3 text-sm font-semibold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 flex items-center gap-2";
+            });
+
+            // Highlight selected tab button
+            const selectedBtn = document.getElementById(`tabBtn-${tabId}`);
+            if (selectedBtn) {
+                selectedBtn.className = "tab-control-btn border-b-2 border-brand-500 px-5 py-3 text-sm font-extrabold text-brand-600 dark:text-white flex items-center gap-2";
+            }
+        }
+
+        /* ==================== CREDENTIAL CONFIGURATION ==================== */
+        function loadSavedSupabaseConfig() {
+            const savedUrl = localStorage.getItem('SP_SUPABASE_URL');
+            const savedKey = localStorage.getItem('SP_SUPABASE_KEY');
+            if (savedUrl) SUPABASE_URL = savedUrl;
+            if (savedKey) SUPABASE_ANON_KEY = savedKey;
+
+            document.getElementById('config-url').value = SUPABASE_URL;
+            document.getElementById('config-key').value = SUPABASE_ANON_KEY;
+        }
+
+        function saveSupabaseConfig() {
+            const url = document.getElementById('config-url').value.trim();
+            const key = document.getElementById('config-key').value.trim();
+
+            if (!url || !key) {
+                showToast("Missing Parameters", "Please supply both Supabase connection endpoints.");
+                return;
+            }
+
+            localStorage.setItem('SP_SUPABASE_URL', url);
+            localStorage.setItem('SP_SUPABASE_KEY', key);
+            SUPABASE_URL = url;
+            SUPABASE_ANON_KEY = key;
+
+            showToast("Credentials Applied", "Configured client with custom settings.");
+            initSupabaseClient();
+        }
+
+        function initSupabaseClient() {
+            if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+                try {
+                    const { createClient } = supabase;
+                    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                } catch (e) {
+                    console.error("Supabase initiation failed", e);
+                }
+            }
+        }
+
+        /* ==================== SECURE ACCESS ROUTER ==================== */
+        function toggleAuthTab(tab) {
+            const configPanel = document.getElementById('panel-config');
+            const configBtn = document.getElementById('tab-config');
+
+            if (configPanel.classList.contains('hidden')) {
+                configPanel.classList.remove('hidden');
+                configBtn.classList.add('text-brand-500');
+            } else {
+                configPanel.classList.add('hidden');
+                configBtn.classList.remove('text-brand-500');
+            }
+        }
+
+        async function checkCurrentUserSession() {
+            if (!supabaseClient) {
+                toggleAuthTab('config');
+                showToast("Connection Needed", "Configure parameters first to authenticate.");
+                return;
+            }
+
+            try {
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                if (session && session.user) {
+                    showMainPortal(session.user);
+                }
+            } catch (err) {
+                console.warn("Session check issues. Transitioning.", err);
+            }
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const submitBtn = document.getElementById('btnAuthSubmit');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin mr-2"></i> Elevating Access...`;
+
+            if (!supabaseClient) {
+                // Instantly load mock sandbox mode for immediate feedback
+                isMockMode = true;
+                showMainPortal({ email });
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Launch Administration Console";
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                
+                isMockMode = false;
+                showToast("Access Granted", "Logged in with database privileges.");
+                showMainPortal(data.user);
+            } catch (err) {
+                // If authorization credentials fail, gracefully prompt to activate interactive Sandbox simulator
+                console.warn("Authentication failed, offering simulator bypass.", err);
+                isMockMode = true;
+                showMainPortal({ email: email || 'offline-admin@nexusprime.com' });
+                showToast("Sandbox Access", "Active session built in Mock simulator mode.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Launch Administration Console";
+            }
+        }
+
+        function handleLogout() {
+            if (supabaseClient && !isMockMode) {
+                try {
+                    supabaseClient.auth.signOut();
+                } catch (e) {}
+            }
+            document.getElementById('mainPortalSection').classList.add('hidden');
+            document.getElementById('authSection').classList.remove('hidden');
+            showToast("Logged Out", "You have successfully signed out of the Administrator controls.");
+        }
+
+        function showMainPortal(user) {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('mainPortalSection').classList.remove('hidden');
+            document.getElementById('userDisplayEmail').textContent = user.email;
+
+            fetchLiveAllTables();
+        }
+
+        /* ==================== DATABASE CRUD SYNC CONTROLLERS ==================== */
+        async function fetchLiveAllTables() {
+            const statusIndicator = document.getElementById('statusIndicator');
+            statusIndicator.classList.remove('hidden');
+
+            if (isMockMode || !supabaseClient) {
+                activateSandboxSimulation();
+                statusIndicator.classList.add('hidden');
+                return;
+            }
+
+            try {
+                // 1. Fetch Courses Track Definition
+                let courseTable = 'courses';
+                let { data: fetchedCourses, error: courseErr } = await supabaseClient.from('courses').select('*');
+                if (courseErr) {
+                    // Try alternative spelling "course"
+                    const fallback = await supabaseClient.from('course').select('*');
+                    if (!fallback.error) {
+                        fetchedCourses = fallback.data;
+                        courseTable = 'course';
+                    }
+                }
+                coursesList = Array.isArray(fetchedCourses) ? fetchedCourses : [];
+
+                // 2. Fetch Live Classes Schedules
+                const { data: fetchedClasses, error: classErr } = await supabaseClient.from('liveclass').select('*');
+                if (classErr) throw classErr;
+                classesList = Array.isArray(fetchedClasses) ? fetchedClasses : [];
+
+                // 3. Fetch Monthly Approvals Schedules
+                const { data: fetchedApprovals, error: approvalErr } = await supabaseClient.from('monthly_approvals').select('*');
+                if (approvalErr) throw approvalErr;
+                approvalsList = Array.isArray(fetchedApprovals) ? fetchedApprovals : [];
+
+                // Update server indicator
+                document.getElementById('systemStateBadge').innerHTML = `<span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Live (Database)</span>`;
+                document.getElementById('mockWarningBanner').classList.add('hidden');
+
+                // Render Tables
+                renderAllTables();
+                calculateAdminStats();
+                showToast("Synchronized", "All schemas parsed directly from active database.");
+
+            } catch (err) {
+                console.error("Supabase sync issue, falling back to mock sandbox.", err);
+                activateSandboxSimulation();
+            } finally {
+                statusIndicator.classList.add('hidden');
+            }
+        }
+
+        function activateSandboxSimulation() {
+            isMockMode = true;
+            document.getElementById('systemStateBadge').innerHTML = `<span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Sandbox Mode</span>`;
+            document.getElementById('mockWarningBanner').classList.remove('hidden');
+
+            // Set up prefilled structured data for safe administration demonstrations
+            if (coursesList.length === 0) {
+                coursesList = [
+                    { id: '1', code: 'AP-Physics', name: 'Advanced Physics Core', type: 'Physics Core' },
+                    { id: '2', code: 'Exam-Prep', name: 'Standard Chemistry Evaluation', type: 'Evaluation' },
+                    { id: '3', code: 'Class-Lecture', name: 'Organic Chemistry Lecture Series', type: 'Chemistry Core' }
+                ];
+            }
+
+            if (classesList.length === 0) {
+                const todayStr = new Date().toISOString().split('T')[0];
+                classesList = [
+                    {
+                        id: 101,
+                        Name: "Advanced Physics Seminar - Gravitational Fields",
+                        "Session Number": "S-101",
+                        Subject: "Physics",
+                        Type: "AP-Physics",
+                        Duration: "1 hr 30 mins",
+                        Date: todayStr,
+                        Month: "7",
+                        ST_Zoom: "08:00:00",
+                        ET_Zoom: "14:30:00",
+                        ST_form_QBT: "08:15:00",
+                        ET_form_QBT: "08:45:00",
+                        ST_form_PPP: "09:00:00",
+                        ET_form_PPP: "14:45:00",
+                        Zoom_Link: "https://zoom.us",
+                        GForm_QBT: "https://docs.google.com/forms",
+                        Gform_PPP: "https://docs.google.com/forms"
+                    },
+                    {
+                        id: 102,
+                        Name: "Chemistry Evaluation Assessment - Unit 3 & 4",
+                        "Session Number": "S-102",
+                        Subject: "Chemistry",
+                        Type: "Exam-Prep",
+                        Duration: "2 hrs 00 mins",
+                        Date: todayStr,
+                        Month: "8",
+                        ST_Zoom: "16:30:00",
+                        ET_Zoom: "20:30:00",
+                        ST_form_QBT: "16:45:00",
+                        ET_form_QBT: "17:45:00",
+                        ST_form_PPP: "17:00:00",
+                        ET_form_PPP: "19:00:00",
+                        Zoom_Link: "https://zoom.us",
+                        GForm_QBT: "https://docs.google.com/forms",
+                        Gform_PPP: "https://docs.google.com/forms"
+                    }
+                ];
+            }
+
+            if (approvalsList.length === 0) {
+                approvalsList = [
+                    { id: 1, email: 'student@nexusprime.com', month_number: '7' },
+                    { id: 2, email: 'test-user@nexusprime.com', month_number: '8' }
+                ];
+            }
+
+            renderAllTables();
+            calculateAdminStats();
+        }
+
+        function calculateAdminStats() {
+            document.getElementById('statClassCount').textContent = classesList.length;
+            document.getElementById('statCourseCount').textContent = coursesList.length;
+            document.getElementById('statApprovalCount').textContent = approvalsList.length;
+        }
+
+        function renderAllTables() {
+            renderClassesTable();
+            renderCoursesTable();
+            renderApprovalsTable();
+            populateCourseDropdown();
+        }
+
+        /* ==================== RENDERING & FILTERING TABLES ==================== */
+        
+        // Populate Course selector inside class creation dialog
+        function populateCourseDropdown() {
+            const select = document.getElementById('f-type');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Choose Mapped Course --</option>';
+            coursesList.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.code || c.id;
+                opt.textContent = `${c.code} (${c.name})`;
+                select.appendChild(opt);
+            });
+        }
+
+        // 1. Class Schedules
+        function renderClassesTable() {
+            const tbody = document.getElementById('classesTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (classesList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-zinc-400">No session scheduled yet. Click "Add New Class" to begin.</td></tr>`;
+                return;
+            }
+
+            classesList.forEach((item, index) => {
+                // Read nested times
+                const zoomTimes = `${item.ST_Zoom || item.st_zoom || '--:--'} to ${item.ET_Zoom || item.et_zoom || '--:--'}`;
+                const qbtTimes = `${item.ST_form_QBT || item.st_form_qbt || '--:--'} to ${item.ET_form_QBT || item.et_form_qbt || '--:--'}`;
+                const pppTimes = `${item.ST_form_PPP || item.st_form_ppp || '--:--'} to ${item.ET_form_PPP || item.et_form_ppp || '--:--'}`;
+
+                const sNo = item["Session Number"] || item.session_number || item.sessionnumber || '--';
+                const courseCode = item.Type || item.type || '--';
+                const classTitle = item.Name || item.name || item.title || 'Untitled Session';
+
+                const row = document.createElement('tr');
+                row.className = "hover:bg-zinc-50 dark:hover:bg-zinc-900/40 class-table-row";
+                row.setAttribute('data-search', `${classTitle} ${item.Subject} ${courseCode}`.toLowerCase());
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 font-bold text-zinc-900 dark:text-white max-w-xs truncate">${classTitle}</td>
+                    <td class="px-6 py-4">
+                        <span class="block font-semibold">No: ${sNo}</span>
+                        <span class="text-xs text-zinc-400">Month: ${item.Month || item.month || '--'}</span>
+                    </td>
+                    <td class="px-6 py-4 font-semibold text-zinc-500">${item.Subject || item.subject || '--'}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 tracking-wider">${courseCode}</span>
+                    </td>
+                    <td class="px-6 py-4 font-medium text-zinc-600 dark:text-zinc-300 font-mono text-xs">${item.Date || item.date || '--'}</td>
+                    <td class="px-6 py-4 text-xs space-y-1">
+                        <div><strong class="text-[10px] text-zinc-400 uppercase">Zoom:</strong> <span class="text-zinc-500">${zoomTimes}</span></div>
+                        <div><strong class="text-[10px] text-zinc-400 uppercase">QBT:</strong> <span class="text-zinc-500">${qbtTimes}</span></div>
+                        <div><strong class="text-[10px] text-zinc-400 uppercase">PPP:</strong> <span class="text-zinc-500">${pppTimes}</span></div>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <button onclick="editClassRecord(${index})" class="p-1.5 text-zinc-400 hover:text-brand-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition-all" title="Edit Session">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deleteClassRecord(${index})" class="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded transition-all" title="Delete Session">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterClassesTable() {
+            const query = document.getElementById('searchClassesInput').value.toLowerCase().trim();
+            const rows = document.querySelectorAll('.class-table-row');
+            rows.forEach(row => {
+                const searchTxt = row.getAttribute('data-search') || '';
+                if (query === '' || searchTxt.includes(query)) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // 2. Course Track Tables
+        function renderCoursesTable() {
+            const tbody = document.getElementById('coursesTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (coursesList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-zinc-400">No Course track exists. Add one on the left.</td></tr>`;
+                return;
+            }
+
+            coursesList.forEach((c, index) => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-zinc-50 dark:hover:bg-zinc-900/40";
+                row.innerHTML = `
+                    <td class="px-6 py-3 font-semibold text-zinc-500">${c.id || '--'}</td>
+                    <td class="px-6 py-3 font-bold text-brand-600 dark:text-brand-400">${c.code || c.Code || '--'}</td>
+                    <td class="px-6 py-3 font-semibold text-zinc-800 dark:text-zinc-200">${c.name || c.Name || '--'}</td>
+                    <td class="px-6 py-3"><span class="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-0.5 rounded text-xs">${c.type || c.Type || '--'}</span></td>
+                    <td class="px-6 py-3 text-right">
+                        <div class="flex items-center justify-end gap-1.5">
+                            <button onclick="editCourseRecord(${index})" class="p-1 text-zinc-400 hover:text-brand-500 transition-colors"><i class="fa-solid fa-edit"></i></button>
+                            <button onclick="deleteCourseRecord(${index})" class="p-1 text-zinc-400 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 3. Access Month Approvals table
+        function renderApprovalsTable() {
+            const tbody = document.getElementById('approvalsTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (approvalsList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-zinc-400">No user approvals registered.</td></tr>`;
+                return;
+            }
+
+            approvalsList.forEach((app, index) => {
+                const userEmail = app.email || app.Email || '--';
+                // Try resolving dynamic variations: month_number, Month_Number, month
+                const rawMonth = app.month_number !== undefined ? app.month_number : (app.Month_Number !== undefined ? app.Month_Number : app.month);
+                const approvedMonth = rawMonth !== undefined && rawMonth !== null ? String(rawMonth) : '--';
+
+                const row = document.createElement('tr');
+                row.className = "hover:bg-zinc-50 dark:hover:bg-zinc-900/40 approval-table-row";
+                row.setAttribute('data-search', `${userEmail} ${approvedMonth}`.toLowerCase());
+                row.innerHTML = `
+                    <td class="px-6 py-3 font-bold text-zinc-800 dark:text-zinc-200">${userEmail}</td>
+                    <td class="px-6 py-3">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 text-xs font-bold rounded-lg border border-emerald-500/20">
+                            <i class="fa-solid fa-calendar-check text-[10px]"></i>
+                            Month Approved: ${approvedMonth}
+                        </span>
+                    </td>
+                    <td class="px-6 py-3 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <button onclick="editApprovalRecord(${index})" class="p-1 text-zinc-400 hover:text-brand-500 transition-colors"><i class="fa-solid fa-edit"></i></button>
+                            <button onclick="deleteApprovalRecord(${index})" class="p-1 text-zinc-400 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterApprovalsTable() {
+            const query = document.getElementById('searchApprovalsInput').value.toLowerCase().trim();
+            const rows = document.querySelectorAll('.approval-table-row');
+            rows.forEach(row => {
+                const sTxt = row.getAttribute('data-search') || '';
+                if (query === '' || sTxt.includes(query)) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        /* ==================== CLASS CRUD METHODS ==================== */
+        function openClassModal() {
+            document.getElementById('classDetailsForm').reset();
+            document.getElementById('class-editing-index').value = '';
+            document.getElementById('classModalTitle').innerHTML = `<i class="fa-solid fa-calendar-plus text-brand-500"></i> Schedule Class Session`;
+            
+            // Prefill current date
+            document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+
+            document.getElementById('classModal').classList.remove('hidden');
+        }
+
+        function closeClassModal() {
+            document.getElementById('classModal').classList.add('hidden');
+        }
+
+        function editClassRecord(index) {
+            const item = classesList[index];
+            if (!item) return;
+
+            document.getElementById('class-editing-index').value = index;
+            document.getElementById('classModalTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-brand-500"></i> Edit Class Session: ${item.Name || 'Record'}`;
+
+            // Populate Form inputs
+            document.getElementById('f-name').value = item.Name || item.name || '';
+            document.getElementById('f-sessionNo').value = item["Session Number"] || item.session_number || item.sessionnumber || '';
+            document.getElementById('f-subject').value = item.Subject || item.subject || '';
+            document.getElementById('f-type').value = item.Type || item.type || '';
+            document.getElementById('f-duration').value = item.Duration || item.duration || '';
+            document.getElementById('f-date').value = item.Date || item.date || '';
+            document.getElementById('f-month').value = item.Month || item.month || '';
+            
+            // Times
+            document.getElementById('f-st-zoom').value = item.ST_Zoom || item.st_zoom || '';
+            document.getElementById('f-et-zoom').value = item.ET_Zoom || item.et_zoom || '';
+            document.getElementById('f-st-qbt').value = item.ST_form_QBT || item.st_form_qbt || '';
+            document.getElementById('f-et-qbt').value = item.ET_form_QBT || item.et_form_qbt || '';
+            document.getElementById('f-st-ppp').value = item.ST_form_PPP || item.st_form_ppp || '';
+            document.getElementById('f-et-ppp').value = item.ET_form_PPP || item.et_form_ppp || '';
+
+            // Redirect Links
+            document.getElementById('f-zoom-link').value = item.Zoom_Link || item.zoom_link || '';
+            document.getElementById('f-qbt-link').value = item.GForm_QBT || item.gform_qbt || '';
+            document.getElementById('f-ppp-link').value = item.Gform_PPP || item.gform_ppp || '';
+
+            document.getElementById('classModal').classList.remove('hidden');
+        }
+
+        async function handleClassFormSubmit(e) {
+            e.preventDefault();
+            const editIndexStr = document.getElementById('class-editing-index').value;
+
+            const sessionObj = {
+                Name: document.getElementById('f-name').value.trim(),
+                "Session Number": document.getElementById('f-sessionNo').value.trim(),
+                Subject: document.getElementById('f-subject').value.trim(),
+                Type: document.getElementById('f-type').value,
+                Duration: document.getElementById('f-duration').value.trim(),
+                Date: document.getElementById('f-date').value,
+                Month: document.getElementById('f-month').value.trim(),
+                ST_Zoom: document.getElementById('f-st-zoom').value.trim() || null,
+                ET_Zoom: document.getElementById('f-et-zoom').value.trim() || null,
+                ST_form_QBT: document.getElementById('f-st-qbt').value.trim() || null,
+                ET_form_QBT: document.getElementById('f-et-qbt').value.trim() || null,
+                ST_form_PPP: document.getElementById('f-st-ppp').value.trim() || null,
+                ET_form_PPP: document.getElementById('f-et-ppp').value.trim() || null,
+                Zoom_Link: document.getElementById('f-zoom-link').value.trim() || null,
+                GForm_QBT: document.getElementById('f-qbt-link').value.trim() || null,
+                Gform_PPP: document.getElementById('f-ppp-link').value.trim() || null
+            };
+
+            if (isMockMode || !supabaseClient) {
+                // Handle Local CRUD Sandbox simulation
+                if (editIndexStr !== '') {
+                    const idx = parseInt(editIndexStr);
+                    sessionObj.id = classesList[idx].id;
+                    classesList[idx] = sessionObj;
+                    showToast("Schedule Edited", "Updated mock class schedule details locally.");
+                } else {
+                    sessionObj.id = Date.now();
+                    classesList.push(sessionObj);
+                    showToast("Schedule Scheduled", "Created mock class schedule details locally.");
+                }
+                closeClassModal();
+                renderAllTables();
+                calculateAdminStats();
+            } else {
+                // Handle Database CRUD
+                try {
+                    if (editIndexStr !== '') {
+                        const idx = parseInt(editIndexStr);
+                        const dbId = classesList[idx].id;
+                        
+                        const { error } = await supabaseClient
+                            .from('liveclass')
+                            .update(sessionObj)
+                            .eq('id', dbId);
+                        
+                        if (error) throw error;
+                        showToast("Class Synchronized", "Successfully updated schedule on database.");
+                    } else {
+                        const { error } = await supabaseClient
+                            .from('liveclass')
+                            .insert([sessionObj]);
+                        
+                        if (error) throw error;
+                        showToast("Class Scheduled", "Successfully configured class on database.");
+                    }
+                    closeClassModal();
+                    fetchLiveAllTables();
+                } catch (err) {
+                    showToast("Database Error", err.message || "Failed saving session schedule record.");
+                }
+            }
+        }
+
+        async function deleteClassRecord(index) {
+            const item = classesList[index];
+            if (!item) return;
+
+            const isConfirmed = confirm(`Are you sure you want to delete session "${item.Name || 'this class'}"? This action cannot be undone.`);
+            if (!isConfirmed) return;
+
+            if (isMockMode || !supabaseClient) {
+                classesList.splice(index, 1);
+                showToast("Record Removed", "Deleted session record in Mock sandbox.");
+                renderAllTables();
+                calculateAdminStats();
+            } else {
+                try {
+                    const { error } = await supabaseClient
+                        .from('liveclass')
+                        .delete()
+                        .eq('id', item.id);
+                    if (error) throw error;
+                    showToast("Record Removed", "Successfully deleted class session from DB.");
+                    fetchLiveAllTables();
+                } catch (err) {
+                    showToast("Database Failure", err.message || "Could not remove live class.");
+                }
+            }
+        }
+
+        /* ==================== COURSE CRUD METHODS ==================== */
+        function resetCourseForm() {
+            document.getElementById('courseForm').reset();
+            document.getElementById('course-editing-id').value = '';
+            document.getElementById('courseFormTitle').innerHTML = `<i class="fa-solid fa-folder-plus text-brand-500"></i> Add New Course Map`;
+        }
+
+        function editCourseRecord(index) {
+            const item = coursesList[index];
+            if (!item) return;
+
+            document.getElementById('course-editing-id').value = index;
+            document.getElementById('courseFormTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-brand-500"></i> Edit Course Track`;
+
+            document.getElementById('course-id').value = item.id || '';
+            document.getElementById('course-code').value = item.code || item.Code || '';
+            document.getElementById('course-name').value = item.name || item.Name || '';
+            document.getElementById('course-type').value = item.type || item.Type || '';
+        }
+
+        async function handleCourseFormSubmit(e) {
+            e.preventDefault();
+            const editIndexStr = document.getElementById('course-editing-id').value;
+
+            const courseObj = {
+                id: document.getElementById('course-id').value.trim() || undefined,
+                code: document.getElementById('course-code').value.trim(),
+                name: document.getElementById('course-name').value.trim(),
+                type: document.getElementById('course-type').value.trim()
+            };
+
+            if (isMockMode || !supabaseClient) {
+                if (editIndexStr !== '') {
+                    const idx = parseInt(editIndexStr);
+                    coursesList[idx] = courseObj;
+                    showToast("Course Edited", "Updated mock course map locally.");
+                } else {
+                    courseObj.id = courseObj.id || String(Date.now());
+                    coursesList.push(courseObj);
+                    showToast("Course Added", "Created mock course map locally.");
+                }
+                resetCourseForm();
+                renderAllTables();
+                calculateAdminStats();
+            } else {
+                try {
+                    let courseTable = 'courses';
+                    
+                    if (editIndexStr !== '') {
+                        const idx = parseInt(editIndexStr);
+                        const dbId = coursesList[idx].id;
+                        
+                        const { error } = await supabaseClient
+                            .from(courseTable)
+                            .update(courseObj)
+                            .eq('id', dbId);
+                        
+                        if (error) throw error;
+                        showToast("Course Synced", "Successfully updated course on database.");
+                    } else {
+                        const { error } = await supabaseClient
+                            .from(courseTable)
+                            .insert([courseObj]);
+                        
+                        if (error) throw error;
+                        showToast("Course Created", "Successfully added course map to DB.");
+                    }
+                    resetCourseForm();
+                    fetchLiveAllTables();
+                } catch (err) {
+                    showToast("Database Error", err.message || "Failed saving course maps.");
+                }
+            }
+        }
+
+        async function deleteCourseRecord(index) {
+            const item = coursesList[index];
+            if (!item) return;
+
+            const isConfirmed = confirm(`Delete course "${item.code || item.name}"?`);
+            if (!isConfirmed) return;
+
+            if (isMockMode || !supabaseClient) {
+                coursesList.splice(index, 1);
+                showToast("Record Removed", "Deleted course track from Sandbox.");
+                renderAllTables();
+                calculateAdminStats();
+            } else {
+                try {
+                    const { error } = await supabaseClient
+                        .from('courses')
+                        .delete()
+                        .eq('id', item.id);
+                    if (error) throw error;
+                    showToast("Record Removed", "Successfully deleted course track.");
+                    fetchLiveAllTables();
+                } catch (err) {
+                    showToast("Database Failure", err.message || "Could not remove course track.");
+                }
+            }
+        }
+
+        /* ==================== ACCESS MONTH APPROVALS CRUD METHODS ==================== */
+        function resetApprovalForm() {
+            document.getElementById('approvalForm').reset();
+            document.getElementById('approval-editing-id').value = '';
+            document.getElementById('approvalFormTitle').innerHTML = `<i class="fa-solid fa-user-plus text-brand-500"></i> Authorize Access Month`;
+        }
+
+        function editApprovalRecord(index) {
+            const item = approvalsList[index];
+            if (!item) return;
+
+            document.getElementById('approval-editing-id').value = index;
+            document.getElementById('approvalFormTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-brand-500"></i> Edit Student Access`;
+
+            document.getElementById('approval-email').value = item.email || item.Email || '';
+            
+            const rawMonth = item.month_number !== undefined ? item.month_number : (item.Month_Number !== undefined ? item.Month_Number : item.month);
+            document.getElementById('approval-month').value = rawMonth !== undefined ? String(rawMonth) : '';
+        }
+
+        async function handleApprovalFormSubmit(e) {
+            e.preventDefault();
+            const editIndexStr = document.getElementById('approval-editing-id').value;
+
+            const email = document.getElementById('approval-email').value.trim();
+            const monthVal = document.getElementById('approval-month').value.trim();
+
+            const approvalObj = {
+                email: email,
+                month_number: monthVal // Standardizing key matching typical approvals table structures
+            };
+
+            if (isMockMode || !supabaseClient) {
+                if (editIndexStr !== '') {
+                    const idx = parseInt(editIndexStr);
+                    approvalsList[idx] = { ...approvalsList[idx], ...approvalObj };
+                    showToast("Access Updated", "Modified mock student approval schedule locally.");
+                } else {
+                    approvalObj.id = Date.now();
+                    approvalsList.push(approvalObj);
+                    showToast("Access Approved", "Added mock student approval schedule locally.");
+                }
+                resetApprovalForm();
+                renderAllTables();
+                calculateAdminStats();
+            } else {
+                try {
+                    if (editIndexStr !== '') {
+                        const idx = parseInt(editIndexStr);
+                        const dbId = approvalsList[idx].id;
+                        
+                        const { error } = await supabaseClient
+                            .from('monthly_approvals')
+                            .update(approvalObj)
+                            .eq('id', dbId);
+                        
+                        if (error) throw error;
+                        showToast("Access Synchronized", "Successfully updated approval on database.");
+                    } else {
+                        const { error } = await supabaseClient
+                            .from('monthly_approvals')
+                            .insert([approvalObj]);
+                        
+                        if (error) throw error;
+                        showToast("Access Authorized", "Successfully configured monthly approval record on DB.");
+                    }
+                    resetApprovalForm();
+                    fetchLiveAllTables();
+                } catch (err) {
+                    showToast("Database Error", err.message || "Failed updating approvals directory.");
+                }
+            }
+        }
+
+        async function deleteApprovalRecord(index) {
+            const item = approvalsList[index];
+            if (!item) return;
+
+            const isConfirmed = confirm(`Revoke month authorization for "${item.email}"?`);
+            if (!isConfirmed) return;
+
+            if (isMockMode || !supabaseClient) {
+                approvalsList.splice(index, 1);
+                showToast("Access Revoked", "Removed student registration from Sandbox directory.");
+                renderAllTables();
+                calculateAdminStats();
+            } else {
+                try {
+                    const { error } = await supabaseClient
+                        .from('monthly_approvals')
+                        .delete()
+                        .eq('id', item.id);
+                    if (error) throw error;
+                    showToast("Access Revoked", "Successfully revoked student monthly authorization.");
+                    fetchLiveAllTables();
+                } catch (err) {
+                    showToast("Database Failure", err.message || "Could not revoke authorization.");
+                }
+            }
+        }
+
+        /* ==================== CUSTOM NOTIFICATION ALERTS ==================== */
+        let toastTimeout;
+        function showToast(title, message) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastMessage').textContent = message;
+
+            toast.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                hideToast();
+            }, 4000);
+        }
+
+        function hideToast() {
+            const toast = document.getElementById('toast');
+            if (toast) {
+                toast.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }
+        }
+    </script>
+</body>
+</html>
